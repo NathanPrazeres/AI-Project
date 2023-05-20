@@ -142,19 +142,19 @@ class Bimaru(Problem):
         for row in range(n_rows):
             for col in range(n_cols):
                 if board.get_value(row, col) is None and board.get_row_total(row) > 0 and board.get_col_total(col) > 0:
-                   
+                    # Checks if it's a possible position for a ship horizontally
                     if board.adjacent_horizontal_values(row, col) not in espaco_vazio \
                     and board.adjacent_vertical_values(row, col) in espaco_vazio \
                     and (board.get_value(row, col + 1) == 'R' or board.get_value(row, col + 1) == 'M' \
                     or board.get_value(row, col - 1) == 'L' or board.get_value(row, col - 1) == 'M'):
                         valid_actions.append((row, col))
-                    
+                    # Checks if it's a possible position for a ship vertically
                     elif board.adjacent_vertical_values(row, col) not in espaco_vazio \
                     and board.adjacent_horizontal_values(row, col) in espaco_vazio \
                     and (board.get_value(row + 1, col) == 'B' or board.get_value(row + 1, col) == 'M' \
                     or board.get_value(row - 1, col) == 'T' or board.get_value(row - 1, col) == 'M'):
                         valid_actions.append((row, col))
-
+                    # Checks if it's a possible position for a ship surrounded by water
                     elif board.adjacent_horizontal_values(row, col) in espaco_vazio \
                     and board.adjacent_vertical_values(row, col) in espaco_vazio \
                     and board.adjacent_vertical_values(row, col + 1) in espaco_vazio \
@@ -181,15 +181,9 @@ class Bimaru(Problem):
         # if the one to the right is a right then the one to the left is a left or a middle
         # and if it's a middle then the one to the left is a left or a middle
 
-        if board.adjacent_vertical_values(row, col) not in espaco_vazio:
-            if board.adjacent_vertical_values(row, col) == 'T' or board.adjacent_vertical_values(row, col) == 't':
-                board.set_value(row + 1, col, bottom)
-            elif board.adjacent_vertical_values(row, col) == middle:
-                board.set_value(row + 1, col, bottom)
-            elif board.adjacent_vertical_values(row, col) == bottom:
-                board.set_value(row - 1, col, 't')
-            else:
-                board.set_value(row - 1, col, 't')
+        if board.adjacent_vertical_values(row, col) in espaco_vazio \
+        and board.adjacent_horizontal_values(row, col) in espaco_vazio:
+            board.set_value(row, col, 'c')
             
 
     def goal_test(self, state: BimaruState):
