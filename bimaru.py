@@ -17,6 +17,10 @@ from search import (
     recursive_best_first_search,
 )
 
+MAX_EDGES = 12
+MAX_CENTERS = 4
+MAX_SINGLES = 4
+espaco_vazio = [(None, None), ('W', None), (None, 'W'), ('W', 'W'), ('.', None), (None, '.'), ('.', 'W'), ('W', '.'), ('.', '.')]
 
 class BimaruState:
     state_id = 0
@@ -28,6 +32,9 @@ class BimaruState:
 
     def __lt__(self, other):
         return self.id < other.id
+
+    def get_board(self):
+        return self.board
 
     # TODO: outros metodos da classe
 
@@ -41,6 +48,12 @@ class Board:
         self.cols = cols
         self.board = [[None for _ in range(cols + 1)] for _ in range(rows + 1)] # +1 para guardar os valores totais da linha e coluna
 
+    """ def get_n_rows(self):
+        return self.rows
+    
+    def get_n_cols(self):
+        return self.cols """
+
     def get_value(self, row: int, col: int) -> str:
         """Devolve o valor na respetiva posição do tabuleiro."""
         if row < 0 or row >= self.rows or col < 0 or col >= self.cols:
@@ -48,12 +61,12 @@ class Board:
         return self.board[row][col]
     
     def get_row_total(self, row: int) -> str:
-        """Devolve o valor total da linha."""
-        return self.board[row][self.cols]
+        """Devolve o número de barcos na linha."""
+        return int(self.board[row][self.cols])
     
     def get_col_total(self, col: int) -> str:
-        """Devolve o valor total da coluna."""
-        return self.board[self.rows][col]
+        """Devolve o número de barcos na coluna."""
+        return int(self.board[self.rows][col])
     
     def set_value(self, row: int, col: int, value: str):
         """Altera o valor na respetiva posição do tabuleiro."""
@@ -70,7 +83,7 @@ class Board:
         return (self.get_value(row, col - 1), self.get_value(row, col + 1))
 
     @staticmethod
-    def parse_instance(standard_input):
+    def parse_instance(from_input=sys.stdin):
         """Lê o test do standard input (stdin) que é passado como argumento
         e retorna uma instância da classe Board.
 
@@ -80,20 +93,21 @@ class Board:
             > from sys import stdin
             > line = stdin.readline().split()
         """
-        rows = standard_input.readline().split()[1:]
-        cols = standard_input.readline().split()[1:]
+        rows = from_input.readline().split()[1:]
+        cols = from_input.readline().split()[1:]
         n_rows = len(rows)
         n_cols = len(cols)
         board = Board(n_rows, n_cols)
 
+        # Para guardar os valores do número de navios que podem estar na linha e coluna
         for row in range(n_rows):
             board.set_value(row, n_cols, rows[row])
         for col in range(n_cols):
             board.set_value(n_rows, col, cols[col])
 
-        n_hints = eval(standard_input.readline())
+        n_hints = eval(from_input.readline())
         for _ in range(n_hints):
-            hint = standard_input.readline().split()[1:]
+            hint = from_input.readline().split()[1:]
             board.set_value(int(hint[0]), int(hint[1]), hint[2])
 
         return board
@@ -113,22 +127,44 @@ class Board:
 class Bimaru(Problem):
     def __init__(self, board: Board):
         """O construtor especifica o estado inicial."""
-        # TODO
-        pass
+        self.state = BimaruState(board)
+        
 
     def actions(self, state: BimaruState):
         """Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento."""
-        # TODO
-        pass
+        valid_actions = []
+        board = state.get_board()
+
+        n_rows = board.rows
+        n_cols = board.cols
+        for row in range(n_rows):
+            for col in range(n_cols):
+                if board.get_value(row, col) is None and board.get_row_total(row) > 0 and board.get_col_total(col) > 0:
+                   
+                    if (board.adjacent_vertical_values(row, col) not in espaco_vazio \
+                    or board.adjacent_horizontal_values(row, col) not in espaco_vazio):
+                        valid_actions.append((row, col))
+                    elif board.adjacent_vertical_values(row, col + 1) in espaco_vazio \
+                    and board.adjacent_vertical_values(row, col - 1) in espaco_vazio:
+                        valid_actions.append((row, col))
+
+        return valid_actions
+    
 
     def result(self, state: BimaruState, action):
         """Retorna o estado resultante de executar a 'action' sobre
         'state' passado como argumento. A ação a executar deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state)."""
-        # TODO
-        pass
+        row = action[0]
+        col = action[1]
+        board = state.get_board()
+        # Gotta see if the position above is a top then the one below is a bottom or a middle
+        # and if it's a middle then the one below is a bottom or a middle
+        # if the bottom one is a wk
+        # if board.adjacent_vertical_values(row, col):
+            
 
     def goal_test(self, state: BimaruState):
         """Retorna True se e só se o estado passado como argumento é
@@ -148,8 +184,11 @@ class Bimaru(Problem):
 if __name__ == "__main__":
     # TODO:
     # Ler o ficheiro do standard input,
-    board = Board.parse_instance(sys.stdin)
+    board = Board.parse_instance()
     # Usar uma técnica de procura para resolver a instância,
     # Retirar a solução a partir do nó resultante,
     # Imprimir para o standard output no formato indicado.
+
+    problem = Bimaru(board)
+    print(problem.actions(problem.state))
     board.print_board()
