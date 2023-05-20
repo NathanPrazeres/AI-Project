@@ -144,28 +144,26 @@ class Bimaru(Problem):
             for col in range(n_cols):
                 if board.get_col_total(col) == 0:
                     continue
-                if board.get_value(row, col) is None:
+                if board.get_value(row, col) is None \
+                and board.adjacent_horizontal_values(row - 1, col) in espaco_vazio \
+                and board.adjacent_horizontal_values(row + 1, col) in espaco_vazio:
                     # Checks if it's a possible position for a ship horizontally
                     if board.adjacent_horizontal_values(row, col) not in espaco_vazio \
                     and board.adjacent_vertical_values(row, col) in espaco_vazio \
                     and (board.get_value(row, col + 1) == 'R' or board.get_value(row, col + 1) == 'M' \
-                    or board.get_value(row, col - 1) == 'L' or board.get_value(row, col - 1) == 'M') \
-                    and board.adjacent_horizontal_values(row - 1, col) in espaco_vazio \
-                    and board.adjacent_horizontal_values(row + 1, col) in espaco_vazio:
+                    or board.get_value(row, col - 1) == 'L' or board.get_value(row, col - 1) == 'M' \
+                    or board.get_value(row, col - 1) == 'x' or board.get_value(row, col + 1) == 'x'):
                         valid_actions.append((row, col))
                     # Checks if it's a possible position for a ship vertically
                     elif board.adjacent_vertical_values(row, col) not in espaco_vazio \
                     and board.adjacent_horizontal_values(row, col) in espaco_vazio \
                     and (board.get_value(row + 1, col) == 'B' or board.get_value(row + 1, col) == 'M' \
-                    or board.get_value(row - 1, col) == 'T' or board.get_value(row - 1, col) == 'M') \
-                    and board.adjacent_horizontal_values(row - 1, col) in espaco_vazio \
-                    and board.adjacent_horizontal_values(row + 1, col) in espaco_vazio:
+                    or board.get_value(row - 1, col) == 'T' or board.get_value(row - 1, col) == 'M' \
+                    or board.get_value(row, col - 1) == 'x' or board.get_value(row, col + 1) == 'x'):
                         valid_actions.append((row, col))
                     # Checks if it's a possible position for a ship surrounded by water
                     elif board.adjacent_horizontal_values(row, col) in espaco_vazio \
-                    and board.adjacent_vertical_values(row, col) in espaco_vazio \
-                    and board.adjacent_vertical_values(row, col + 1) in espaco_vazio \
-                    and board.adjacent_vertical_values(row, col - 1) in espaco_vazio:
+                    and board.adjacent_vertical_values(row, col) in espaco_vazio:
                         valid_actions.append((row, col))
 
         return valid_actions
