@@ -19,9 +19,11 @@ from search import (
 
 MAX_EDGES = 12
 MAX_CENTERS = 4
-MAX_SINGLES = 4
-limites = ['T', 'B', 'L', 'R', 'C']
-empty_space = [(None, None), ('W', None), (None, 'W'), ('W', 'W'), ('.', None), (None, '.'), ('.', 'W'), ('W', '.'), ('.', '.')]
+MAX_CIRCLES = 4
+
+EDGES = ['T', 'B', 'L', 'R', 't', 'b', 'l', 'r']
+EMPTY_SPACE = [None, '.', 'W']
+EMPTY_ADJACENT = [(None, None), ('W', None), (None, 'W'), ('W', 'W'), ('.', None), (None, '.'), ('.', 'W'), ('W', '.'), ('.', '.')]
 
 class BimaruState:
     state_id = 0
@@ -68,6 +70,11 @@ class Board:
     def get_col_total(self, col: int) -> str:
         """Devolve o número de barcos na coluna."""
         return int(self.board[self.rows][col])
+    
+    def lower_total(self, row: int, col: int):
+        """Diminui o número de barcos por colocar na linha e coluna."""
+        self.board[row][self.cols] = eval(self.board[row][self.cols]) - 1
+        self.board[self.rows][col] = eval(self.board[self.rows][col]) - 1
     
     def set_value(self, row: int, col: int, value: str):
         """Altera o valor na respetiva posição do tabuleiro."""
@@ -117,10 +124,11 @@ class Board:
         """Imprime o tabuleiro no standard output (stdout)."""
         for row in range(self.rows):
             for col in range(self.cols):
-                if board.get_value(row, col) is None:   # DEBUG: remove when the program is finished
+                """ if board.get_value(row, col) is None:   # DEBUG: remove when the program is finished
                     print('.', end='')
                 else:
-                    print(board.get_value(row, col), end='')
+                    print(board.get_value(row, col), end='') """
+                print(board.get_value(row, col), end='')
             print()
 
 
@@ -145,25 +153,25 @@ class Bimaru(Problem):
                 if board.get_col_total(col) == 0:
                     continue
                 if board.get_value(row, col) is None \
-                and board.adjacent_horizontal_values(row - 1, col) in empty_space \
-                and board.adjacent_horizontal_values(row + 1, col) in empty_space:
+                and board.adjacent_horizontal_values(row - 1, col) in EMPTY_ADJACENT \
+                and board.adjacent_horizontal_values(row + 1, col) in EMPTY_ADJACENT:
                     # Checks if it's a possible position for a ship horizontally
-                    if board.adjacent_horizontal_values(row, col) not in empty_space \
-                    and board.adjacent_vertical_values(row, col) in empty_space \
+                    if board.adjacent_horizontal_values(row, col) not in EMPTY_ADJACENT \
+                    and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
                     and (board.get_value(row, col + 1) == 'R' or board.get_value(row, col + 1) == 'M' \
                     or board.get_value(row, col - 1) == 'L' or board.get_value(row, col - 1) == 'M' \
                     or board.get_value(row, col - 1) == 'x' or board.get_value(row, col + 1) == 'x'):
                         valid_actions.append((row, col))
                     # Checks if it's a possible position for a ship vertically
-                    elif board.adjacent_vertical_values(row, col) not in empty_space \
-                    and board.adjacent_horizontal_values(row, col) in empty_space \
+                    elif board.adjacent_vertical_values(row, col) not in EMPTY_ADJACENT \
+                    and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
                     and (board.get_value(row + 1, col) == 'B' or board.get_value(row + 1, col) == 'M' \
                     or board.get_value(row - 1, col) == 'T' or board.get_value(row - 1, col) == 'M' \
                     or board.get_value(row, col - 1) == 'x' or board.get_value(row, col + 1) == 'x'):
                         valid_actions.append((row, col))
                     # Checks if it's a possible position for a ship surrounded by water
-                    elif board.adjacent_horizontal_values(row, col) in empty_space \
-                    and board.adjacent_vertical_values(row, col) in empty_space:
+                    elif board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
+                    and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
                         valid_actions.append((row, col))
 
         return valid_actions
@@ -178,16 +186,83 @@ class Bimaru(Problem):
         col = action[1]
         board = state.get_board()
 
+        board.lower_total(row, col)
         # I set the occupied positions of the ship to and 'x' so that I don't have to calculate what type they are yet
         board.set_value(row, col, 'x')
+
             
 
     def goal_test(self, state: BimaruState):
         """Retorna True se e só se o estado passado como argumento é
         um estado objetivo. Deve verificar se todas as posições do tabuleiro
         estão preenchidas de acordo com as regras do problema."""
-        # TODO
-        pass
+        board = state.get_board()
+        n_rows = board.rows
+        n_cols = board.cols
+        n_circles, n_middles, n_edges = 0, 0, 0
+        for row in range(n_rows):
+            if board.get_row_total(row) != 0:
+                print("ROW TOTAL ERROR")
+                return False
+            for col in range(n_cols):
+                if (board.get_value(row, col) in EDGES):
+                    n_edges += 1
+                elif (board.get_value(row, col) in ['M', 'm']):
+                    n_middles += 1
+                elif (board.get_value(row, col) in ['C', 'c']):
+                    n_circles += 1
+
+                if board.get_col_total(col) != 0:
+                    print("COL TOTAL ERROR")
+                    return False
+                if board.get_value(row, col) is None:
+                    board.set_value(row, col, '.')
+                if board.get_value(row, col) == 'x':
+
+                    if board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
+                    and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
+                        board.set_value(row, col, 'c')
+                        n_circles += 1
+
+                    elif board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
+                        if row == 0 or board.get_value(row - 1, col) == '.' \
+                        or board.get_value(row - 1, col) == 'W' \
+                        or board.get_value(row - 1, col) == None:
+                            board.set_value(row, col, 't')
+                            n_edges += 1
+                        elif row == n_rows - 1 or board.get_value(row + 1, col) == '.' \
+                        or board.get_value(row + 1, col) == 'W' \
+                        or board.get_value(row + 1, col) == None:
+                            board.set_value(row, col, 'b')
+                            n_edges += 1
+                        elif (board.get_value(row - 1, col) in EDGES or board.get_value(row - 1, col) == 'M' \
+                        or board.get_value(row - 1, col) == 'm') and (board.get_value(row + 1, col) in EDGES \
+                        or board.get_value(row + 1, col) == 'x'):
+                            board.set_value(row, col, 'm')
+                            n_middles += 1
+
+                    elif board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
+                        if col == 0 or board.get_value(row, col - 1) == '.' \
+                        or board.get_value(row, col - 1) == 'W' \
+                        or board.get_value(row, col - 1) == None:
+                            board.set_value(row, col, 'l')
+                            n_edges += 1
+                        elif col == n_cols - 1 or board.get_value(row, col + 1) == '.' \
+                        or board.get_value(row, col + 1) == 'W' \
+                        or board.get_value(row, col + 1) == None:
+                            board.set_value(row, col, 'r')
+                            n_edges += 1
+                        elif (board.get_value(row, col - 1) in EDGES or board.get_value(row, col - 1) == 'm' \
+                        or board.get_value(row, col - 1) == 'M') and (board.get_value(row, col + 1) in EDGES \
+                        or board.get_value(row, col + 1) == 'x'):
+                            board.set_value(row, col, 'm')
+                            n_middles += 1
+
+        if n_circles != MAX_CIRCLES or n_middles != MAX_CENTERS or n_edges != MAX_EDGES:
+            print("NUMBER OF SHIPS ERROR")
+            print(n_circles, n_middles, n_edges)
+            return False
+        return True
 
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""
@@ -208,7 +283,5 @@ if __name__ == "__main__":
     problem = Bimaru(board)
     actions = problem.actions(problem.state)
     print(actions)
-    problem.result(problem.state, actions[2])
-    actions = problem.actions(problem.state)
-    print(actions)
+    print(problem.goal_test(problem.state))
     board.print_board()
