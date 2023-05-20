@@ -20,6 +20,7 @@ from search import (
 MAX_EDGES = 12
 MAX_CENTERS = 4
 MAX_SINGLES = 4
+limites = ['T', 'B', 'L', 'R', 'C']
 espaco_vazio = [(None, None), ('W', None), (None, 'W'), ('W', 'W'), ('.', None), (None, '.'), ('.', 'W'), ('W', '.'), ('.', '.')]
 
 class BimaruState:
@@ -116,7 +117,7 @@ class Board:
         """Imprime o tabuleiro no standard output (stdout)."""
         for row in range(self.rows):
             for col in range(self.cols):
-                if board.get_value(row, col) is None:
+                if board.get_value(row, col) is None:   # DEBUG: remove when the program is finished
                     print('.', end='')
                 else:
                     print(board.get_value(row, col), end='')
@@ -142,10 +143,21 @@ class Bimaru(Problem):
             for col in range(n_cols):
                 if board.get_value(row, col) is None and board.get_row_total(row) > 0 and board.get_col_total(col) > 0:
                    
-                    if (board.adjacent_vertical_values(row, col) not in espaco_vazio \
-                    or board.adjacent_horizontal_values(row, col) not in espaco_vazio):
+                    if board.adjacent_horizontal_values(row, col) not in espaco_vazio \
+                    and board.adjacent_vertical_values(row, col) in espaco_vazio \
+                    and (board.get_value(row, col + 1) == 'R' or board.get_value(row, col + 1) == 'M' \
+                    or board.get_value(row, col - 1) == 'L' or board.get_value(row, col - 1) == 'M'):
                         valid_actions.append((row, col))
-                    elif board.adjacent_vertical_values(row, col + 1) in espaco_vazio \
+                    
+                    elif board.adjacent_vertical_values(row, col) not in espaco_vazio \
+                    and board.adjacent_horizontal_values(row, col) in espaco_vazio \
+                    and (board.get_value(row + 1, col) == 'B' or board.get_value(row + 1, col) == 'M' \
+                    or board.get_value(row - 1, col) == 'T' or board.get_value(row - 1, col) == 'M'):
+                        valid_actions.append((row, col))
+
+                    elif board.adjacent_horizontal_values(row, col) in espaco_vazio \
+                    and board.adjacent_vertical_values(row, col) in espaco_vazio \
+                    and board.adjacent_vertical_values(row, col + 1) in espaco_vazio \
                     and board.adjacent_vertical_values(row, col - 1) in espaco_vazio:
                         valid_actions.append((row, col))
 
@@ -162,8 +174,22 @@ class Bimaru(Problem):
         board = state.get_board()
         # Gotta see if the position above is a top then the one below is a bottom or a middle
         # and if it's a middle then the one below is a bottom or a middle
-        # if the bottom one is a wk
-        # if board.adjacent_vertical_values(row, col):
+        # if the bottom one is a bottom then the one above is a top or a middle
+        # and if it's a middle then the one above is a top or a middle
+        # if the one to the left is a left then the one to the right is a right or a middle
+        # and if it's a middle then the one to the right is a right or a middle
+        # if the one to the right is a right then the one to the left is a left or a middle
+        # and if it's a middle then the one to the left is a left or a middle
+
+        if board.adjacent_vertical_values(row, col) not in espaco_vazio:
+            if board.adjacent_vertical_values(row, col) == 'T' or board.adjacent_vertical_values(row, col) == 't':
+                board.set_value(row + 1, col, bottom)
+            elif board.adjacent_vertical_values(row, col) == middle:
+                board.set_value(row + 1, col, bottom)
+            elif board.adjacent_vertical_values(row, col) == bottom:
+                board.set_value(row - 1, col, 't')
+            else:
+                board.set_value(row - 1, col, 't')
             
 
     def goal_test(self, state: BimaruState):
