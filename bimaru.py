@@ -136,23 +136,30 @@ class Bimaru(Problem):
         partir do estado passado como argumento."""
         valid_actions = []
         board = state.get_board()
-
         n_rows = board.rows
         n_cols = board.cols
         for row in range(n_rows):
+            if board.get_row_total(row) == 0:
+                continue
             for col in range(n_cols):
-                if board.get_value(row, col) is None and board.get_row_total(row) > 0 and board.get_col_total(col) > 0:
+                if board.get_col_total(col) == 0:
+                    continue
+                if board.get_value(row, col) is None:
                     # Checks if it's a possible position for a ship horizontally
                     if board.adjacent_horizontal_values(row, col) not in espaco_vazio \
                     and board.adjacent_vertical_values(row, col) in espaco_vazio \
                     and (board.get_value(row, col + 1) == 'R' or board.get_value(row, col + 1) == 'M' \
-                    or board.get_value(row, col - 1) == 'L' or board.get_value(row, col - 1) == 'M'):
+                    or board.get_value(row, col - 1) == 'L' or board.get_value(row, col - 1) == 'M') \
+                    and board.adjacent_horizontal_values(row - 1, col) in espaco_vazio \
+                    and board.adjacent_horizontal_values(row + 1, col) in espaco_vazio:
                         valid_actions.append((row, col))
                     # Checks if it's a possible position for a ship vertically
                     elif board.adjacent_vertical_values(row, col) not in espaco_vazio \
                     and board.adjacent_horizontal_values(row, col) in espaco_vazio \
                     and (board.get_value(row + 1, col) == 'B' or board.get_value(row + 1, col) == 'M' \
-                    or board.get_value(row - 1, col) == 'T' or board.get_value(row - 1, col) == 'M'):
+                    or board.get_value(row - 1, col) == 'T' or board.get_value(row - 1, col) == 'M') \
+                    and board.adjacent_horizontal_values(row - 1, col) in espaco_vazio \
+                    and board.adjacent_horizontal_values(row + 1, col) in espaco_vazio:
                         valid_actions.append((row, col))
                     # Checks if it's a possible position for a ship surrounded by water
                     elif board.adjacent_horizontal_values(row, col) in espaco_vazio \
@@ -172,18 +179,9 @@ class Bimaru(Problem):
         row = action[0]
         col = action[1]
         board = state.get_board()
-        # Gotta see if the position above is a top then the one below is a bottom or a middle
-        # and if it's a middle then the one below is a bottom or a middle
-        # if the bottom one is a bottom then the one above is a top or a middle
-        # and if it's a middle then the one above is a top or a middle
-        # if the one to the left is a left then the one to the right is a right or a middle
-        # and if it's a middle then the one to the right is a right or a middle
-        # if the one to the right is a right then the one to the left is a left or a middle
-        # and if it's a middle then the one to the left is a left or a middle
 
-        if board.adjacent_vertical_values(row, col) in espaco_vazio \
-        and board.adjacent_horizontal_values(row, col) in espaco_vazio:
-            board.set_value(row, col, 'c')
+        # I set the occupied positions of the ship to and 'x' so that I don't have to calculate what type they are yet
+        board.set_value(row, col, 'x')
             
 
     def goal_test(self, state: BimaruState):
@@ -210,5 +208,9 @@ if __name__ == "__main__":
     # Imprimir para o standard output no formato indicado.
 
     problem = Bimaru(board)
-    print(problem.actions(problem.state))
+    actions = problem.actions(problem.state)
+    print(actions)
+    problem.result(problem.state, actions[2])
+    actions = problem.actions(problem.state)
+    print(actions)
     board.print_board()
