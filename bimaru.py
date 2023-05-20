@@ -223,7 +223,8 @@ class Bimaru(Problem):
                     and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
                         board.set_value(row, col, 'c')
                         n_circles += 1
-
+                    # FIX: THIS JANKY ASS CODE
+                    # Tip to self: use EMPTY_SPACE whenever possible
                     elif board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
                         if row == 0 or board.get_value(row - 1, col) == '.' \
                         or board.get_value(row - 1, col) == 'W' \
