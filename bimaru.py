@@ -124,11 +124,11 @@ class Board:
         """Imprime o tabuleiro no standard output (stdout)."""
         for row in range(self.rows):
             for col in range(self.cols):
-                """ if board.get_value(row, col) is None:   # DEBUG: remove when the program is finished
+                if board.get_value(row, col) is None:   # DEBUG: remove when the program is finished
                     print('.', end='')
                 else:
-                    print(board.get_value(row, col), end='') """
-                print(board.get_value(row, col), end='')
+                    print(board.get_value(row, col), end='')
+                # print(board.get_value(row, col), end='')
             print()
 
 
@@ -153,28 +153,62 @@ class Bimaru(Problem):
                 if board.get_col_total(col) == 0:
                     continue
                 if board.get_value(row, col) is None \
-                and board.adjacent_horizontal_values(row - 1, col) in EMPTY_ADJACENT \
-                and board.adjacent_horizontal_values(row + 1, col) in EMPTY_ADJACENT:
-                    # Checks if it's a possible position for a ship horizontally
-                    if board.adjacent_horizontal_values(row, col) not in EMPTY_ADJACENT \
-                    and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
-                    and (board.get_value(row, col + 1) == 'R' or board.get_value(row, col + 1) == 'M' \
-                    or board.get_value(row, col - 1) == 'L' or board.get_value(row, col - 1) == 'M' \
-                    or board.get_value(row, col - 1) == 'x' or board.get_value(row, col + 1) == 'x'):
-                        valid_actions.append((row, col))
-                    # Checks if it's a possible position for a ship vertically
-                    elif board.adjacent_vertical_values(row, col) not in EMPTY_ADJACENT \
-                    and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
-                    and (board.get_value(row + 1, col) == 'B' or board.get_value(row + 1, col) == 'M' \
-                    or board.get_value(row - 1, col) == 'T' or board.get_value(row - 1, col) == 'M' \
-                    or board.get_value(row, col - 1) == 'x' or board.get_value(row, col + 1) == 'x'):
-                        valid_actions.append((row, col))
-                    # Checks if it's a possible position for a ship surrounded by water
-                    elif board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
-                    and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
-                        valid_actions.append((row, col))
-
+                and (col == 0 or board.adjacent_vertical_values(row, col - 1) in EMPTY_ADJACENT) \
+                and (col == n_cols - 1 or board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT) \
+                and board.get_value(row, col - 1) not in ['R', 'T', 'B', 'C', 'r', 't', 'b', 'c'] \
+                and board.get_value(row, col + 1) not in ['L', 'T', 'B', 'C', 'l', 't', 'b', 'c'] \
+                and board.get_value(row - 1, col) not in ['B', 'L', 'R', 'C', 'b', 'l', 'r', 'c'] \
+                and board.get_value(row + 1, col) not in ['T', 'L', 'R', 'C', 't', 'l', 'r', 'c']:
+                    
+                    if board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
+                    and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
+                        valid_actions.append((row, col, 'c'))
+                    # Trying to make a horizontal boat
+                    if board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
+                        if board.get_value(row, col - 1) in EMPTY_SPACE:
+                            valid_actions.append((row, col, 'l'))
+                        if board.get_value(row, col + 1) in EMPTY_SPACE:
+                            valid_actions.append((row, col, 'r'))
+                        # FIX: THE NEXT LINE MIGHT NEED TO BE REMOVED
+                        # (since you can only make a middle if there is already a left or right)
+                        if board.get_value(row, col - 1) in ['L', 'M', 'l', 'm'] \
+                        or board.get_value(row, col + 1) in ['R', 'M', 'r', 'm']:
+                            valid_actions.append((row, col, 'm'))
+                    # Trying to make a vertical boat
+                    if board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
+                        if board.get_value(row - 1, col) in EMPTY_SPACE:
+                            valid_actions.append((row, col, 't'))
+                        if board.get_value(row + 1, col) in EMPTY_SPACE:
+                            valid_actions.append((row, col, 'b'))
+                        # FIX: THE NEXT LINE MIGHT NEED TO BE REMOVED
+                        # (since you can only make a middle if there is already a top or bottom)
+                        if board.get_value(row - 1, col) in ['T', 'M', 't', 'm'] \
+                        or board.get_value(row + 1, col) in ['B', 'M', 'b', 'm']:
+                            valid_actions.append((row, col, 'm'))
         return valid_actions
+                    
+
+        """ if board.get_value(row, col) is None \
+        and board.adjacent_horizontal_values(row - 1, col) in EMPTY_ADJACENT \
+        and board.adjacent_horizontal_values(row + 1, col) in EMPTY_ADJACENT:
+            # Checks if it's a possible position for a ship horizontally
+            if board.adjacent_horizontal_values(row, col) not in EMPTY_ADJACENT \
+            and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
+            and (board.get_value(row, col + 1) == 'R' or board.get_value(row, col + 1) == 'M' \
+            or board.get_value(row, col - 1) == 'L' or board.get_value(row, col - 1) == 'M' \
+            or board.get_value(row, col - 1) == 'x' or board.get_value(row, col + 1) == 'x'):
+                valid_actions.append((row, col))
+            # Checks if it's a possible position for a ship vertically
+            elif board.adjacent_vertical_values(row, col) not in EMPTY_ADJACENT \
+            and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
+            and (board.get_value(row + 1, col) == 'B' or board.get_value(row + 1, col) == 'M' \
+            or board.get_value(row - 1, col) == 'T' or board.get_value(row - 1, col) == 'M' \
+            or board.get_value(row, col - 1) == 'x' or board.get_value(row, col + 1) == 'x'):
+                valid_actions.append((row, col))
+            # Checks if it's a possible position for a ship surrounded by water
+            elif board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
+            and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
+                valid_actions.append((row, col)) """
     
 
     def result(self, state: BimaruState, action):
@@ -184,11 +218,11 @@ class Bimaru(Problem):
         self.actions(state)."""
         row = action[0]
         col = action[1]
+        move = action[2]
         board = state.get_board()
 
         board.lower_total(row, col)
-        # I set the occupied positions of the ship to and 'x' so that I don't have to calculate what type they are yet
-        board.set_value(row, col, 'x')
+        board.set_value(row, col, move)
 
             
 
@@ -205,6 +239,10 @@ class Bimaru(Problem):
                 print("ROW TOTAL ERROR")
                 return False
             for col in range(n_cols):
+                if board.get_col_total(col) != 0:
+                    print("COL TOTAL ERROR")
+                    return False
+                
                 if (board.get_value(row, col) in EDGES):
                     n_edges += 1
                 elif (board.get_value(row, col) in ['M', 'm']):
@@ -212,9 +250,6 @@ class Bimaru(Problem):
                 elif (board.get_value(row, col) in ['C', 'c']):
                     n_circles += 1
 
-                if board.get_col_total(col) != 0:
-                    print("COL TOTAL ERROR")
-                    return False
                 if board.get_value(row, col) is None:
                     board.set_value(row, col, '.')
                 if board.get_value(row, col) == 'x':
@@ -284,5 +319,5 @@ if __name__ == "__main__":
     problem = Bimaru(board)
     actions = problem.actions(problem.state)
     print(actions)
-    print(problem.goal_test(problem.state))
+    # print(problem.goal_test(problem.state))
     board.print_board()
