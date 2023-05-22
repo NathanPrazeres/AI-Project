@@ -17,9 +17,9 @@ from search import (
     recursive_best_first_search,
 )
 
-MAX_EDGES = 12
-MAX_CENTERS = 4
-MAX_CIRCLES = 4
+NUM_EDGES = 12
+NUM_MIDDLES = 4
+NUM_CIRCLES = 4
 
 EDGES = ['T', 'B', 'L', 'R', 't', 'b', 'l', 'r']
 EMPTY_SPACE = [None, '.', 'W']
@@ -236,65 +236,67 @@ class Bimaru(Problem):
         n_circles, n_middles, n_edges = 0, 0, 0
         for row in range(n_rows):
             if board.get_row_total(row) != 0:
-                print("ROW TOTAL ERROR")
+                print("ROW TOTAL ERROR") # DEBUG
                 return False
             for col in range(n_cols):
                 if board.get_col_total(col) != 0:
-                    print("COL TOTAL ERROR")
+                    print("COL TOTAL ERROR") # DEBUG
                     return False
                 
-                if (board.get_value(row, col) in EDGES):
-                    n_edges += 1
-                elif (board.get_value(row, col) in ['M', 'm']):
-                    n_middles += 1
-                elif (board.get_value(row, col) in ['C', 'c']):
-                    n_circles += 1
-
                 if board.get_value(row, col) is None:
                     board.set_value(row, col, '.')
-                if board.get_value(row, col) == 'x':
+                elif board.get_value(row, col) not in EMPTY_SPACE:
 
-                    if board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
-                    and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
-                        board.set_value(row, col, 'c')
+                    if board.get_value(row, col) in ['C', 'c']:
                         n_circles += 1
-                    # FIX: THIS JANKY ASS CODE
-                    # Tip to self: use EMPTY_SPACE whenever possible
-                    elif board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
-                        if row == 0 or board.get_value(row - 1, col) == '.' \
-                        or board.get_value(row - 1, col) == 'W' \
-                        or board.get_value(row - 1, col) == None:
-                            board.set_value(row, col, 't')
-                            n_edges += 1
-                        elif row == n_rows - 1 or board.get_value(row + 1, col) == '.' \
-                        or board.get_value(row + 1, col) == 'W' \
-                        or board.get_value(row + 1, col) == None:
-                            board.set_value(row, col, 'b')
-                            n_edges += 1
-                        elif (board.get_value(row - 1, col) in EDGES or board.get_value(row - 1, col) == 'M' \
-                        or board.get_value(row - 1, col) == 'm') and (board.get_value(row + 1, col) in EDGES \
-                        or board.get_value(row + 1, col) == 'x'):
-                            board.set_value(row, col, 'm')
-                            n_middles += 1
+                    elif board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT and \
+                    board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
+                        print("NON C EMPTY") # DEBUG
+                        return False
+                    elif board.get_value(row, col) in ['M', 'm']:
+                        n_middles += 1
+                        if board.get_value(row - 1, col) not in ['T', 't'] \
+                        and board.get_value(row + 1, col) not in ['B', 'b'] \
+                        and board.get_value(row, col - 1) not in ['L', 'l'] \
+                        and board.get_value(row, col + 1) not in ['R', 'r']:
+                            print("M ERROR") # DEBUG
+                            return False
+                    elif board.get_value(row, col) in ['T', 't']:
+                        n_edges += 1
+                        if board.get_value(row + 1, col) not in ['B', 'b', 'M', 'm']:
+                            print("T ERROR") # DEBUG
+                            return False
+                        elif board.get_value(row + 1, col) in ['M', 'm']:
+                            if board.get_value(row + 2, col) not in ['B', 'b', 'M', 'm']:
+                                print("T ERROR") # DEBUG
+                                return False
+                            if board.get_value(row + 2, col) in ['M', 'm'] and \
+                            board.get_value(row + 3, col) not in ['B', 'b']:
+                                print("T ERROR") # DEBUG
+                                return False
+                    elif board.get_value(row, col) in ['B', 'b']:
+                        n_edges += 1
+                        if board.get_value(row - 1, col) not in ['T', 't', 'M', 'm']:
+                            print("B ERROR") # DEBUG
+                    elif board.get_value(row, col) in ['L', 'l']:
+                        n_edges += 1
+                        if board.get_value(row, col + 1) not in ['R', 'r', 'M', 'm']:
+                            print("L ERROR") # DEBUG
+                            return False
+                        elif board.get_value(row, col + 1) in ['M', 'm']:
+                            if board.get_value(row, col + 2) not in ['R', 'r', 'M', 'm']:
+                                print("L ERROR") # DEBUG
+                                return False
+                            if board.get_value(row, col + 2) in ['M', 'm'] and \
+                            board.get_value(row, col + 3) not in ['R', 'r']:
+                                print("L ERROR") # DEBUG
+                                return False
+                    elif board.get_value(row, col) in ['R', 'r']:
+                        n_edges += 1
+                        if board.get_value(row, col - 1) not in ['L', 'l', 'M', 'm']:
+                            print("R ERROR") # DEBUG
 
-                    elif board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
-                        if col == 0 or board.get_value(row, col - 1) == '.' \
-                        or board.get_value(row, col - 1) == 'W' \
-                        or board.get_value(row, col - 1) == None:
-                            board.set_value(row, col, 'l')
-                            n_edges += 1
-                        elif col == n_cols - 1 or board.get_value(row, col + 1) == '.' \
-                        or board.get_value(row, col + 1) == 'W' \
-                        or board.get_value(row, col + 1) == None:
-                            board.set_value(row, col, 'r')
-                            n_edges += 1
-                        elif (board.get_value(row, col - 1) in EDGES or board.get_value(row, col - 1) == 'm' \
-                        or board.get_value(row, col - 1) == 'M') and (board.get_value(row, col + 1) in EDGES \
-                        or board.get_value(row, col + 1) == 'x'):
-                            board.set_value(row, col, 'm')
-                            n_middles += 1
-
-        if n_circles != MAX_CIRCLES or n_middles != MAX_CENTERS or n_edges != MAX_EDGES:
+        if n_circles != NUM_CIRCLES or n_middles != NUM_MIDDLES or n_edges != NUM_EDGES:
             print("NUMBER OF SHIPS ERROR")
             print(n_circles, n_middles, n_edges)
             return False
@@ -319,5 +321,5 @@ if __name__ == "__main__":
     problem = Bimaru(board)
     actions = problem.actions(problem.state)
     print(actions)
-    # print(problem.goal_test(problem.state))
+    print(problem.goal_test(problem.state))
     board.print_board()
