@@ -21,9 +21,24 @@ NUM_EDGES = 12
 NUM_MIDDLES = 4
 NUM_CIRCLES = 4
 
-EDGES = ['T', 'B', 'L', 'R', 't', 'b', 'l', 'r']
+TOP = ['T', 't']
+BOTTOM = ['B', 'b']
+LEFT = ['L', 'l']
+RIGHT = ['R', 'r']
+CIRCLE = ['C', 'c']
+MIDDLE = ['M', 'm']
+EDGES = [x for x in TOP + BOTTOM + LEFT + RIGHT]
 EMPTY_SPACE = [None, '.', 'W']
-EMPTY_ADJACENT = [(None, None), ('W', None), (None, 'W'), ('W', 'W'), ('.', None), (None, '.'), ('.', 'W'), ('W', '.'), ('.', '.')]
+EMPTY_ADJACENT = [(x, y) for x in EMPTY_SPACE for y in EMPTY_SPACE]
+
+BATTLESHIP_V = [(w, x, y, z) for w in TOP for x in MIDDLE for y in MIDDLE for z in BOTTOM]
+BATTLESHIP_H = [(w, x, y, z) for w in LEFT for x in MIDDLE for y in MIDDLE for z in RIGHT]
+
+CRUISER_V = [(w, x, y) for w in TOP for x in MIDDLE for y in BOTTOM]
+CRUISER_H = [(w, x, y) for w in LEFT for x in MIDDLE for y in RIGHT]
+
+DESTROYER_V = [(w, x) for w in TOP for x in BOTTOM]
+DESTROYER_H = [(w, x) for w in LEFT for x in RIGHT]
 
 class BimaruState:
     state_id = 0
@@ -38,9 +53,13 @@ class BimaruState:
 
     def get_board(self):
         return self.board
+    
+    def get_id(self):
+        return self.id
 
     # TODO: outros metodos da classe
 
+####################################################################################################
 
 class Board:
     """Representação interna de um tabuleiro de Bimaru."""
@@ -57,28 +76,34 @@ class Board:
     def get_n_cols(self):
         return self.cols """
 
-    def get_value(self, row: int, col: int) -> str:
+    def copy_board(self):
+        """Devolve uma cópia do tabuleiro."""
+        new_board = Board(self.rows, self.cols)
+        new_board.board = [[self.board[row][col] for col in range(self.cols + 1)] for row in range(self.rows + 1)]
+        return new_board
+    
+    def set_value(self, row: int, col: int, value):
+        """Altera o valor na respetiva posição do tabuleiro."""
+        self.board[row][col] = value
+
+    def get_value(self, row: int, col: int):
         """Devolve o valor na respetiva posição do tabuleiro."""
         if row < 0 or row >= self.rows or col < 0 or col >= self.cols:
             return None
         return self.board[row][col]
     
-    def get_row_total(self, row: int) -> str:
+    def get_row_total(self, row: int) -> int:
         """Devolve o número de barcos na linha."""
         return int(self.board[row][self.cols])
     
-    def get_col_total(self, col: int) -> str:
+    def get_col_total(self, col: int) -> int:
         """Devolve o número de barcos na coluna."""
         return int(self.board[self.rows][col])
     
     def lower_total(self, row: int, col: int):
         """Diminui o número de barcos por colocar na linha e coluna."""
-        self.board[row][self.cols] = eval(self.board[row][self.cols]) - 1
-        self.board[self.rows][col] = eval(self.board[self.rows][col]) - 1
-    
-    def set_value(self, row: int, col: int, value: str):
-        """Altera o valor na respetiva posição do tabuleiro."""
-        self.board[row][col] = value
+        self.set_value(row, self.cols, self.get_row_total(row) - 1)
+        self.set_value(self.rows, col, self.get_col_total(col) - 1)
 
     def adjacent_vertical_values(self, row: int, col: int) -> (str, str):
         """Devolve os valores imediatamente acima e abaixo,
@@ -117,6 +142,7 @@ class Board:
         for _ in range(n_hints):
             hint = from_input.readline().split()[1:]
             board.set_value(int(hint[0]), int(hint[1]), hint[2])
+            board.lower_total(int(hint[0]), int(hint[1]))
 
         return board
 
@@ -124,37 +150,40 @@ class Board:
         """Imprime o tabuleiro no standard output (stdout)."""
         for row in range(self.rows):
             for col in range(self.cols):
-                if board.get_value(row, col) is None:   # DEBUG: remove when the program is finished
+                if self.get_value(row, col) is None:   # DEBUG: remove when the program is finished
                     print('.', end='')
                 else:
-                    print(board.get_value(row, col), end='')
-                # print(board.get_value(row, col), end='')
+                    print(self.get_value(row, col), end='')
+                # print(self.get_value(row, col), end='')
             print()
 
-
+####################################################################################################
 
 class Bimaru(Problem):
     def __init__(self, board: Board):
         """O construtor especifica o estado inicial."""
         self.state = BimaruState(board)
-        
+        super().__init__(self.state)
 
     def actions(self, state: BimaruState):
         """Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento."""
         valid_actions = []
-        board = state.get_board()
-        n_rows = board.rows
-        n_cols = board.cols
-        for row in range(n_rows):
-            if board.get_row_total(row) == 0:
+        board: Board = state.get_board()
+        board.print_board()
+        for row in range(board.rows):
+            if board.get_row_total(row) <= 0:
                 continue
-            for col in range(n_cols):
-                if board.get_col_total(col) == 0:
+            for col in range(board.cols):
+                if board.get_col_total(col) <= 0:
                     continue
+                if board.adjacent_horizontal_values(row, col) not in EMPTY_ADJACENT \
+                and board.adjacent_vertical_values(row, col) not in EMPTY_ADJACENT:
+                    continue
+                    
                 if board.get_value(row, col) is None \
                 and (col == 0 or board.adjacent_vertical_values(row, col - 1) in EMPTY_ADJACENT) \
-                and (col == n_cols - 1 or board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT) \
+                and (col == board.cols - 1 or board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT) \
                 and board.get_value(row, col - 1) not in ['R', 'T', 'B', 'C', 'r', 't', 'b', 'c'] \
                 and board.get_value(row, col + 1) not in ['L', 'T', 'B', 'C', 'l', 't', 'b', 'c'] \
                 and board.get_value(row - 1, col) not in ['B', 'L', 'R', 'C', 'b', 'l', 'r', 'c'] \
@@ -165,9 +194,9 @@ class Bimaru(Problem):
                         valid_actions.append((row, col, 'c'))
                     # Trying to make a horizontal boat
                     if board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
-                        if board.get_value(row, col - 1) in EMPTY_SPACE:
+                        if board.get_value(row, col - 1) in EMPTY_SPACE and col != board.cols - 1:
                             valid_actions.append((row, col, 'l'))
-                        if board.get_value(row, col + 1) in EMPTY_SPACE:
+                        if board.get_value(row, col + 1) in EMPTY_SPACE and col != 0:
                             valid_actions.append((row, col, 'r'))
                         # FIX: THE NEXT LINE MIGHT NEED TO BE REMOVED
                         # (since you can only make a middle if there is already a left or right)
@@ -176,9 +205,9 @@ class Bimaru(Problem):
                             valid_actions.append((row, col, 'm'))
                     # Trying to make a vertical boat
                     if board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
-                        if board.get_value(row - 1, col) in EMPTY_SPACE:
+                        if board.get_value(row - 1, col) in EMPTY_SPACE and row != board.rows - 1:
                             valid_actions.append((row, col, 't'))
-                        if board.get_value(row + 1, col) in EMPTY_SPACE:
+                        if board.get_value(row + 1, col) in EMPTY_SPACE and row != 0:
                             valid_actions.append((row, col, 'b'))
                         # FIX: THE NEXT LINE MIGHT NEED TO BE REMOVED
                         # (since you can only make a middle if there is already a top or bottom)
@@ -186,43 +215,26 @@ class Bimaru(Problem):
                         or board.get_value(row + 1, col) in ['B', 'M', 'b', 'm']:
                             valid_actions.append((row, col, 'm'))
         return valid_actions
-                    
 
-        """ if board.get_value(row, col) is None \
-        and board.adjacent_horizontal_values(row - 1, col) in EMPTY_ADJACENT \
-        and board.adjacent_horizontal_values(row + 1, col) in EMPTY_ADJACENT:
-            # Checks if it's a possible position for a ship horizontally
-            if board.adjacent_horizontal_values(row, col) not in EMPTY_ADJACENT \
-            and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
-            and (board.get_value(row, col + 1) == 'R' or board.get_value(row, col + 1) == 'M' \
-            or board.get_value(row, col - 1) == 'L' or board.get_value(row, col - 1) == 'M' \
-            or board.get_value(row, col - 1) == 'x' or board.get_value(row, col + 1) == 'x'):
-                valid_actions.append((row, col))
-            # Checks if it's a possible position for a ship vertically
-            elif board.adjacent_vertical_values(row, col) not in EMPTY_ADJACENT \
-            and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
-            and (board.get_value(row + 1, col) == 'B' or board.get_value(row + 1, col) == 'M' \
-            or board.get_value(row - 1, col) == 'T' or board.get_value(row - 1, col) == 'M' \
-            or board.get_value(row, col - 1) == 'x' or board.get_value(row, col + 1) == 'x'):
-                valid_actions.append((row, col))
-            # Checks if it's a possible position for a ship surrounded by water
-            elif board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
-            and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
-                valid_actions.append((row, col)) """
-    
 
-    def result(self, state: BimaruState, action):
+    def result(self, state: BimaruState, action) -> BimaruState:
         """Retorna o estado resultante de executar a 'action' sobre
         'state' passado como argumento. A ação a executar deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state)."""
+        board: Board = state.get_board()
+        copy: Board = board.copy_board()
+        if action not in self.actions(state):
+            print(action)
+            state.get_board().print_board()
+            raise ValueError('Invalid action')
         row = action[0]
         col = action[1]
         move = action[2]
-        board = state.get_board()
-
-        board.lower_total(row, col)
-        board.set_value(row, col, move)
+        copy.set_value(int(row), int(col), str(move))
+        copy.lower_total(row, col)
+        child_state: BimaruState = BimaruState(copy)
+        return child_state
 
             
 
@@ -230,15 +242,13 @@ class Bimaru(Problem):
         """Retorna True se e só se o estado passado como argumento é
         um estado objetivo. Deve verificar se todas as posições do tabuleiro
         estão preenchidas de acordo com as regras do problema."""
-        board = state.get_board()
-        n_rows = board.rows
-        n_cols = board.cols
-        n_circles, n_middles, n_edges = 0, 0, 0
-        for row in range(n_rows):
+        board: Board = state.get_board()
+        n_circles, n_middles, n_l, n_r, n_t, n_b = 0, 0, 0, 0, 0, 0
+        for row in range(board.rows):
             if board.get_row_total(row) != 0:
                 print("ROW TOTAL ERROR") # DEBUG
                 return False
-            for col in range(n_cols):
+            for col in range(board.cols):
                 if board.get_col_total(col) != 0:
                     print("COL TOTAL ERROR") # DEBUG
                     return False
@@ -262,7 +272,7 @@ class Bimaru(Problem):
                             print("M ERROR") # DEBUG
                             return False
                     elif board.get_value(row, col) in ['T', 't']:
-                        n_edges += 1
+                        n_t += 1
                         if board.get_value(row + 1, col) not in ['B', 'b', 'M', 'm']:
                             print("T ERROR") # DEBUG
                             return False
@@ -275,11 +285,11 @@ class Bimaru(Problem):
                                 print("T ERROR") # DEBUG
                                 return False
                     elif board.get_value(row, col) in ['B', 'b']:
-                        n_edges += 1
+                        n_b += 1
                         if board.get_value(row - 1, col) not in ['T', 't', 'M', 'm']:
                             print("B ERROR") # DEBUG
                     elif board.get_value(row, col) in ['L', 'l']:
-                        n_edges += 1
+                        n_l += 1
                         if board.get_value(row, col + 1) not in ['R', 'r', 'M', 'm']:
                             print("L ERROR") # DEBUG
                             return False
@@ -292,20 +302,20 @@ class Bimaru(Problem):
                                 print("L ERROR") # DEBUG
                                 return False
                     elif board.get_value(row, col) in ['R', 'r']:
-                        n_edges += 1
+                        n_r += 1
                         if board.get_value(row, col - 1) not in ['L', 'l', 'M', 'm']:
                             print("R ERROR") # DEBUG
 
-        if n_circles != NUM_CIRCLES or n_middles != NUM_MIDDLES or n_edges != NUM_EDGES:
-            print("NUMBER OF SHIPS ERROR")
-            print(n_circles, n_middles, n_edges)
+        if n_circles != NUM_CIRCLES or n_middles != NUM_MIDDLES or \
+        (n_r + n_l + n_b + n_t) != NUM_EDGES or n_r != n_l or n_b != n_t:
+            print("NUMBER OF SHIPS ERROR") # DEBUG
             return False
         return True
 
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""
         # TODO
-        pass
+        return 1
 
     # TODO: outros metodos da classe
 
@@ -313,13 +323,14 @@ class Bimaru(Problem):
 if __name__ == "__main__":
     # TODO:
     # Ler o ficheiro do standard input,
-    board = Board.parse_instance()
+    board: Board = Board.parse_instance()
     # Usar uma técnica de procura para resolver a instância,
     # Retirar a solução a partir do nó resultante,
     # Imprimir para o standard output no formato indicado.
 
     problem = Bimaru(board)
-    actions = problem.actions(problem.state)
-    print(actions)
-    print(problem.goal_test(problem.state))
+    print(problem.actions(problem.state))
+
+    goal_node = depth_first_tree_search(problem)
+
     board.print_board()
