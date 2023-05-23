@@ -43,6 +43,11 @@ DESTROYER_H = [(w, x) for w in LEFT for x in RIGHT]
 class BimaruState:
     state_id = 0
 
+    num_battleships = 1
+    num_cruisers = 2
+    num_destroyers = 3
+    num_submarines = 4
+
     def __init__(self, board):
         self.board = board
         self.id = BimaruState.state_id
@@ -142,7 +147,8 @@ class Board:
         for _ in range(n_hints):
             hint = from_input.readline().split()[1:]
             board.set_value(int(hint[0]), int(hint[1]), hint[2])
-            board.lower_total(int(hint[0]), int(hint[1]))
+            if hint[2] != 'W':
+                board.lower_total(int(hint[0]), int(hint[1]))
 
         return board
 
@@ -165,22 +171,20 @@ class Bimaru(Problem):
         self.state = BimaruState(board)
         super().__init__(self.state)
 
-    def actions(self, state: BimaruState):
-        """Retorna uma lista de ações que podem ser executadas a
-        partir do estado passado como argumento."""
+    def brute_force_actions(self, state: BimaruState):
         valid_actions = []
         board: Board = state.get_board()
-        board.print_board()
         for row in range(board.rows):
             if board.get_row_total(row) <= 0:
                 continue
             for col in range(board.cols):
                 if board.get_col_total(col) <= 0:
                     continue
+                # Making sure at least one of the axies is empty
                 if board.adjacent_horizontal_values(row, col) not in EMPTY_ADJACENT \
                 and board.adjacent_vertical_values(row, col) not in EMPTY_ADJACENT:
                     continue
-                    
+                # Making sure there are no adjacent tiles that would invalidate the creation of a ship
                 if board.get_value(row, col) is None \
                 and (col == 0 or board.adjacent_vertical_values(row, col - 1) in EMPTY_ADJACENT) \
                 and (col == board.cols - 1 or board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT) \
@@ -189,6 +193,13 @@ class Bimaru(Problem):
                 and board.get_value(row - 1, col) not in ['B', 'L', 'R', 'C', 'b', 'l', 'r', 'c'] \
                 and board.get_value(row + 1, col) not in ['T', 'L', 'R', 'C', 't', 'l', 'r', 'c']:
                     
+                    if (board.get_value(row, col - 2) in LEFT) \
+                    or (board.get_value(row - 2, col) in TOP) \
+                    or (board.get_value(row, col + 2) in RIGHT) \
+                    or (board.get_value(row + 2, col) in BOTTOM):
+                        continue
+
+
                     if board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
                     and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
                         valid_actions.append((row, col, 'c'))
@@ -216,6 +227,160 @@ class Bimaru(Problem):
                             valid_actions.append((row, col, 'm'))
         return valid_actions
 
+    def battleship_actions(self, state: BimaruState):
+        valid_actions = []
+        board: Board = state.get_board()
+        # Try to place a horizinatal battleship
+        for row in range(board.rows):
+            if board.get_row_total(row) <= 3:
+                continue
+            for col in range(board.cols - 3):
+                if board.get_col_total(col) <= 0:
+                    continue
+                if board.get_value(row, col) is None \
+                and board.get_value(row, col + 1) is None \
+                and board.get_value(row, col + 2) is None \
+                and board.get_value(row, col + 3) is None \
+                and (col == 0 or (board.adjacent_vertical_values(row, col - 1) in EMPTY_ADJACENT and \
+                board.get_value(row, col - 1) in EMPTY_SPACE)) \
+                and (col == board.cols - 4 or (board.adjacent_vertical_values(row, col + 4) in EMPTY_ADJACENT \
+                and board.get_value(row, col + 4) in EMPTY_SPACE)) \
+                and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
+                and board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT \
+                and board.adjacent_vertical_values(row, col + 2) in EMPTY_ADJACENT \
+                and board.adjacent_vertical_values(row, col + 3) in EMPTY_ADJACENT:
+                    valid_actions.append((row, col, 'lmmr'))
+        # Try to place a vertical battleship
+        for col in range(board.cols):
+            if board.get_col_total(col) <= 3:
+                continue
+            for row in range(board.rows - 3):
+                if board.get_row_total(row) <= 0:
+                    continue
+                if board.get_value(row, col) is None \
+                and board.get_value(row + 1, col) is None \
+                and board.get_value(row + 2, col) is None \
+                and board.get_value(row + 3, col) is None \
+                and (row == 0 or (board.adjacent_horizontal_values(row - 1, col) in EMPTY_ADJACENT \
+                and board.get_value(row - 1, col) in EMPTY_SPACE)) \
+                and (row == board.rows - 4 or (board.adjacent_horizontal_values(row + 4, col) in EMPTY_ADJACENT \
+                and board.get_value(row + 4, col) in EMPTY_SPACE)) \
+                and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
+                and board.adjacent_horizontal_values(row + 1, col) in EMPTY_ADJACENT \
+                and board.adjacent_horizontal_values(row + 2, col) in EMPTY_ADJACENT \
+                and board.adjacent_horizontal_values(row + 3, col) in EMPTY_ADJACENT:
+                    valid_actions.append((row, col, 'tmmb'))
+        return valid_actions
+
+    def cruiser_actions(self, state: BimaruState):
+        valid_actions = []
+        board: Board = state.get_board()
+        # Try to place a horizinatal cruiser
+        for row in range(board.rows):
+            if board.get_row_total(row) <= 2:
+                continue
+            for col in range(board.cols - 2):
+                if board.get_col_total(col) <= 0:
+                    continue
+                if board.get_value(row, col) is None \
+                and board.get_value(row, col + 1) is None \
+                and board.get_value(row, col + 2) is None \
+                and (col == 0 or (board.adjacent_vertical_values(row, col - 1) in EMPTY_ADJACENT \
+                and board.get_value(row, col - 1) in EMPTY_SPACE)) \
+                and (col == board.cols - 3 or (board.adjacent_vertical_values(row, col + 3) in EMPTY_ADJACENT \
+                and board.get_value(row, col + 3) in EMPTY_SPACE)) \
+                and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
+                and board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT \
+                and board.adjacent_vertical_values(row, col + 2) in EMPTY_ADJACENT:
+                    valid_actions.append((row, col, 'lmr'))
+        # Try to place a vertical cruiser
+        for col in range(board.cols):
+            if board.get_col_total(col) <= 2:
+                continue
+            for row in range(board.rows - 2):
+                if board.get_row_total(row) <= 0:
+                    continue
+                if board.get_value(row, col) is None \
+                and board.get_value(row + 1, col) is None \
+                and board.get_value(row + 2, col) is None \
+                and (row == 0 or (board.adjacent_horizontal_values(row - 1, col) in EMPTY_ADJACENT \
+                and board.get_value(row - 1, col) in EMPTY_SPACE)) \
+                and (row == board.rows - 3 or (board.adjacent_horizontal_values(row + 3, col) in EMPTY_ADJACENT \
+                and board.get_value(row + 3, col) in EMPTY_SPACE)) \
+                and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
+                and board.adjacent_horizontal_values(row + 1, col) in EMPTY_ADJACENT \
+                and board.adjacent_horizontal_values(row + 2, col) in EMPTY_ADJACENT:
+                    valid_actions.append((row, col, 'tmb'))
+        return valid_actions
+    
+    def destroyer_actions(self, state: BimaruState):
+        valid_actions = []
+        board: Board = state.get_board()
+        # Try to place a horizinatal cruiser
+        for row in range(board.rows):
+            if board.get_row_total(row) <= 1:
+                continue
+            for col in range(board.cols - 1):
+                if board.get_col_total(col) <= 0:
+                    continue
+                if board.get_value(row, col) is None \
+                and board.get_value(row, col + 1) is None \
+                and (col == 0 or (board.adjacent_vertical_values(row, col - 1) in EMPTY_ADJACENT \
+                and board.get_value(row, col - 1) in EMPTY_SPACE)) \
+                and (col == board.cols - 2 or (board.adjacent_vertical_values(row, col + 2) in EMPTY_ADJACENT \
+                and board.get_value(row, col + 2) in EMPTY_SPACE)) \
+                and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
+                and board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT:
+                    valid_actions.append((row, col, 'lr'))
+        # Try to place a vertical cruiser
+        for col in range(board.cols):
+            if board.get_col_total(col) <= 1:
+                continue
+            for row in range(board.rows - 1):
+                if board.get_row_total(row) <= 0:
+                    continue
+                if board.get_value(row, col) is None \
+                and board.get_value(row + 1, col) is None \
+                and (row == 0 or (board.adjacent_horizontal_values(row - 1, col) in EMPTY_ADJACENT \
+                and board.get_value(row - 1, col) in EMPTY_SPACE)) \
+                and (row == board.rows - 2 or (board.adjacent_horizontal_values(row + 2, col) in EMPTY_ADJACENT \
+                and board.get_value(row + 2, col) in EMPTY_SPACE)) \
+                and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
+                and board.adjacent_horizontal_values(row + 1, col) in EMPTY_ADJACENT:
+                    valid_actions.append((row, col, 'tb'))
+        return valid_actions
+    
+    def submarine_actions(self, state: BimaruState):
+        valid_actions = []
+        board: Board = state.get_board()
+        for row in range(board.rows):
+            if board.get_row_total(row) <= 0:
+                continue
+            for col in range(board.cols):
+                if board.get_col_total(col) <= 0:
+                    continue
+                if board.get_value(row, col) is None \
+                and (col == 0 or board.adjacent_vertical_values(row, col - 1) in EMPTY_ADJACENT) \
+                and (col == board.cols - 1 or board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT) \
+                and (row == 0 or board.adjacent_horizontal_values(row - 1, col) in EMPTY_ADJACENT) \
+                and (row == board.rows - 1 or board.adjacent_horizontal_values(row + 1, col) in EMPTY_ADJACENT) \
+                and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
+                and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
+                    valid_actions.append((row, col, 'c'))
+        return valid_actions
+
+
+    def actions(self, state: BimaruState):
+        """Retorna uma lista de ações que podem ser executadas a
+        partir do estado passado como argumento."""
+        actions = []
+        actions += self.battleship_actions(state)
+        actions += self.cruiser_actions(state)
+        actions += self.destroyer_actions(state)
+        actions += self.submarine_actions(state)
+        actions += self.brute_force_actions(state)
+        return actions
+
 
     def result(self, state: BimaruState, action) -> BimaruState:
         """Retorna o estado resultante de executar a 'action' sobre
@@ -224,16 +389,36 @@ class Bimaru(Problem):
         self.actions(state)."""
         board: Board = state.get_board()
         copy: Board = board.copy_board()
+        child_state: BimaruState = BimaruState(copy)
+        child_state.num_battleships = state.num_battleships
+        child_state.num_cruisers = state.num_cruisers
+        child_state.num_destroyers = state.num_destroyers
+        child_state.num_submarines = state.num_submarines
         if action not in self.actions(state):
-            print(action)
+            print("THE STATE'S ACTIONS ARE: " + self.actions(state))
+            print("THE ACTION: " + action)
             state.get_board().print_board()
             raise ValueError('Invalid action')
         row = action[0]
         col = action[1]
         move = action[2]
-        copy.set_value(int(row), int(col), str(move))
-        copy.lower_total(row, col)
-        child_state: BimaruState = BimaruState(copy)
+
+        if move == 'c':
+            state.num_submarines -= 1
+        elif len(move) == 2:
+            state.num_destroyers -= 1
+        elif len(move) == 3:
+            state.num_cruisers -= 1
+        elif len(move) == 4:
+            state.num_battleships -= 1
+        for x in move:
+            copy.set_value(int(row), int(col), str(x))
+            copy.lower_total(row, col)
+            if move[0] == 'l':
+                col += 1
+            elif move[0] == 't':
+                row += 1
+        child_state.get_board().print_board()
         return child_state
 
             
@@ -242,8 +427,13 @@ class Bimaru(Problem):
         """Retorna True se e só se o estado passado como argumento é
         um estado objetivo. Deve verificar se todas as posições do tabuleiro
         estão preenchidas de acordo com as regras do problema."""
+        if state is None:
+            return False
         board: Board = state.get_board()
-        n_circles, n_middles, n_l, n_r, n_t, n_b = 0, 0, 0, 0, 0, 0
+        num_battleships = state.num_battleships
+        num_cruisers = state.num_cruisers
+        num_destroyers = state.num_destroyers
+        num_submarines = state.num_submarines
         for row in range(board.rows):
             if board.get_row_total(row) != 0:
                 print("ROW TOTAL ERROR") # DEBUG
@@ -252,10 +442,68 @@ class Bimaru(Problem):
                 if board.get_col_total(col) != 0:
                     print("COL TOTAL ERROR") # DEBUG
                     return False
-                
+                """ THIS IS NOT A GOOD PLACE FOR THIS
                 if board.get_value(row, col) is None:
-                    board.set_value(row, col, '.')
-                elif board.get_value(row, col) not in EMPTY_SPACE:
+                    board.set_value(row, col, '.') """ # FIX
+
+                if board.get_value(row, col) not in EMPTY_SPACE:
+                    if board.get_value(row, col) in ['C', 'c']:
+                        num_submarines -= 1
+
+                    # Horizontal tests
+                    elif board.get_value(row, col) in ['L', 'l']:
+                        n_l += 1
+                        if col >= board.cols - 1 or board.get_value(row, col + 1) not in ['M', 'm', 'R', 'r']:
+                            print("L ERROR")
+                            return False
+                        if board.get_value(row, col + 1) in ['M', 'm']:
+                            if col >= board.cols - 2 or board.get_value(row, col + 2) not in ['M', 'm', 'R', 'r']:
+                                print("L ERROR")
+                                return False
+                            if board.get_value(row, col + 2) in ['M', 'm']:
+                                if col >= board.cols - 3 or board.get_value(row, col + 3) not in ['R', 'r']:
+                                    print("L ERROR")
+                                    return False
+                                if board.get_value(row, col + 3) in ['R', 'r']:
+                                    num_battleships -= 1
+                            elif board.get_value(row, col + 2) in ['R', 'r']:
+                                num_cruisers -= 1
+                        elif board.get_value(row, col + 1) in ['R', 'r']:
+                            num_destroyers -= 1
+                    
+                    # Vertical tests
+                    elif board.get_value(row, col) in ['T', 't']:
+                        if row >= board.rows - 1 or board.get_value(row + 1, col) not in ['M', 'm', 'B', 'b']:
+                            print("T ERROR")
+                            return False
+                        if board.get_value(row + 1, col) in ['M', 'm']:
+                            if row >= board.rows - 2 or board.get_value(row + 2, col) not in ['M', 'm', 'B', 'b']:
+                                print("T ERROR")
+                                return False
+                            if board.get_value(row + 2, col) in ['M', 'm']:
+                                if row >= board.rows - 3 or board.get_value(row + 3, col) not in ['B', 'b']:
+                                    print("T ERROR")
+                                    return False
+                                if board.get_value(row + 3, col) in ['B', 'b']:
+                                    num_battleships -= 1
+                            elif board.get_value(row + 2, col) in ['B', 'b']:
+                                num_cruisers -= 1
+                        elif board.get_value(row + 1, col) in ['B', 'b']:
+                            num_destroyers -= 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+                """ elif board.get_value(row, col) not in EMPTY_SPACE:
 
                     if board.get_value(row, col) in ['C', 'c']:
                         n_circles += 1
@@ -304,10 +552,10 @@ class Bimaru(Problem):
                     elif board.get_value(row, col) in ['R', 'r']:
                         n_r += 1
                         if board.get_value(row, col - 1) not in ['L', 'l', 'M', 'm']:
-                            print("R ERROR") # DEBUG
+                            print("R ERROR") # DEBUG """
 
-        if n_circles != NUM_CIRCLES or n_middles != NUM_MIDDLES or \
-        (n_r + n_l + n_b + n_t) != NUM_EDGES or n_r != n_l or n_b != n_t:
+        if num_submarines != 0 or num_destroyers != 0 or \
+        num_cruisers != 0 or num_battleships != 0:
             print("NUMBER OF SHIPS ERROR") # DEBUG
             return False
         return True
@@ -315,9 +563,7 @@ class Bimaru(Problem):
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""
         # TODO
-        return 1
-
-    # TODO: outros metodos da classe
+        return 0
 
 
 if __name__ == "__main__":
@@ -329,8 +575,10 @@ if __name__ == "__main__":
     # Imprimir para o standard output no formato indicado.
 
     problem = Bimaru(board)
+    
     print(problem.actions(problem.state))
 
-    goal_node = depth_first_tree_search(problem)
+    goal_node: Node = depth_first_tree_search(problem)
 
-    board.print_board()
+    print("Is goal?", problem.goal_test(goal_node.state))
+    goal_node.state.get_board().print_board()
