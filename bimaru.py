@@ -74,6 +74,7 @@ class Board:
         self.rows = rows
         self.cols = cols
         self.board = [[None for _ in range(cols + 1)] for _ in range(rows + 1)] # +1 para guardar os valores totais da linha e coluna
+        self.CORNER_COORDS = ((x, y) for x in (0, self.rows) for y in (0, self.cols))
 
     """ def get_n_rows(self):
         return self.rows
@@ -188,42 +189,43 @@ class Bimaru(Problem):
                 if board.get_value(row, col) is None \
                 and (col == 0 or board.adjacent_vertical_values(row, col - 1) in EMPTY_ADJACENT) \
                 and (col == board.cols - 1 or board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT) \
-                and board.get_value(row, col - 1) not in ['R', 'T', 'B', 'C', 'r', 't', 'b', 'c'] \
-                and board.get_value(row, col + 1) not in ['L', 'T', 'B', 'C', 'l', 't', 'b', 'c'] \
-                and board.get_value(row - 1, col) not in ['B', 'L', 'R', 'C', 'b', 'l', 'r', 'c'] \
-                and board.get_value(row + 1, col) not in ['T', 'L', 'R', 'C', 't', 'l', 'r', 'c']:
+                and board.get_value(row, col - 1) not in (RIGHT + TOP + BOTTOM + CIRCLE) \
+                and board.get_value(row, col + 1) not in (LEFT + TOP + BOTTOM + CIRCLE) \
+                and board.get_value(row - 1, col) not in (RIGHT + LEFT + BOTTOM + CIRCLE) \
+                and board.get_value(row + 1, col) not in (RIGHT + TOP + LEFT + CIRCLE):
                     
-                    if (board.get_value(row, col - 2) in LEFT) \
-                    or (board.get_value(row - 2, col) in TOP) \
-                    or (board.get_value(row, col + 2) in RIGHT) \
-                    or (board.get_value(row + 2, col) in BOTTOM):
-                        continue
-
-
                     if board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
                     and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
                         valid_actions.append((row, col, 'c'))
+
                     # Trying to make a horizontal boat
                     if board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
-                        if board.get_value(row, col - 1) in EMPTY_SPACE and col != board.cols - 1:
+                        if board.get_value(row, col - 1) in EMPTY_SPACE and col != board.cols - 1 \
+                        and board.get_value(row, col - 2) not in LEFT:
                             valid_actions.append((row, col, 'l'))
-                        if board.get_value(row, col + 1) in EMPTY_SPACE and col != 0:
+                        if board.get_value(row, col + 1) in EMPTY_SPACE and col != 0 \
+                        and board.get_value(row, col - 1) in LEFT + MIDDLE \
+                        and board.get_value(row, col + 2) not in RIGHT:
                             valid_actions.append((row, col, 'r'))
                         # FIX: THE NEXT LINE MIGHT NEED TO BE REMOVED
-                        # (since you can only make a middle if there is already a left or right)
-                        if board.get_value(row, col - 1) in ['L', 'M', 'l', 'm'] \
-                        or board.get_value(row, col + 1) in ['R', 'M', 'r', 'm']:
+                        # (since you can only make a middle if there is already a left)
+                        if board.get_value(row, col - 1) in LEFT + MIDDLE \
+                        and ((row, col) not in board.CORNER_COORDS):
                             valid_actions.append((row, col, 'm'))
+
                     # Trying to make a vertical boat
                     if board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
-                        if board.get_value(row - 1, col) in EMPTY_SPACE and row != board.rows - 1:
+                        if board.get_value(row - 1, col) in EMPTY_SPACE and row != board.rows - 1 \
+                        and board.get_value(row - 2, col) not in TOP:
                             valid_actions.append((row, col, 't'))
-                        if board.get_value(row + 1, col) in EMPTY_SPACE and row != 0:
+                        if board.get_value(row + 1, col) in EMPTY_SPACE and row != 0 \
+                        and board.get_value(row, col - 1) in TOP + MIDDLE \
+                        and board.get_value(row + 2, col) not in BOTTOM:
                             valid_actions.append((row, col, 'b'))
                         # FIX: THE NEXT LINE MIGHT NEED TO BE REMOVED
-                        # (since you can only make a middle if there is already a top or bottom)
-                        if board.get_value(row - 1, col) in ['T', 'M', 't', 'm'] \
-                        or board.get_value(row + 1, col) in ['B', 'M', 'b', 'm']:
+                        # (since you can only make a middle if there is already a top)
+                        if board.get_value(row - 1, col) in TOP + MIDDLE \
+                        and ((row, col) not in board.CORNER_COORDS):
                             valid_actions.append((row, col, 'm'))
         return valid_actions
 
@@ -452,7 +454,6 @@ class Bimaru(Problem):
 
                     # Horizontal tests
                     elif board.get_value(row, col) in ['L', 'l']:
-                        n_l += 1
                         if col >= board.cols - 1 or board.get_value(row, col + 1) not in ['M', 'm', 'R', 'r']:
                             print("L ERROR")
                             return False
