@@ -43,11 +43,6 @@ DESTROYER_H = [(w, x) for w in LEFT for x in RIGHT]
 class BimaruState:
     state_id = 0
 
-    num_battleships = 1
-    num_cruisers = 2
-    num_destroyers = 3
-    num_submarines = 4
-
     def __init__(self, board):
         self.board = board
         self.id = BimaruState.state_id
@@ -59,8 +54,6 @@ class BimaruState:
     def get_board(self):
         return self.board
     
-    def get_id(self):
-        return self.id
 
     # TODO: outros metodos da classe
 
@@ -68,24 +61,40 @@ class BimaruState:
 
 class Board:
     """Representação interna de um tabuleiro de Bimaru."""
+    hints = []
+    
+    num_battleships = 1
+    num_cruisers = 2
+    num_destroyers = 3
+    num_submarines = 4
 
     def __init__(self, rows: int, cols: int):
         """Construtor: recebe o número de linhas e colunas do tabuleiro."""
         self.rows = rows
         self.cols = cols
         self.board = [[None for _ in range(cols + 1)] for _ in range(rows + 1)] # +1 para guardar os valores totais da linha e coluna
-        self.CORNER_COORDS = ((x, y) for x in (0, self.rows) for y in (0, self.cols))
 
     """ def get_n_rows(self):
         return self.rows
     
     def get_n_cols(self):
         return self.cols """
+    
+    def isolated(self, row: int, col: int) -> bool:
+        """Verifica se a posição é isolada, ou seja, não tem barcos adjacentes (nem na diagonal)."""
+        return self.adjacent_horizontal_values(row, col) == EMPTY_ADJACENT \
+            and self.adjacent_vertical_values(row, col) == EMPTY_ADJACENT \
+            and self.adjacent_vertical_values(row, col - 1) == EMPTY_ADJACENT \
+            and self.adjacent_vertical_values(row, col + 1) == EMPTY_ADJACENT \
 
     def copy_board(self):
         """Devolve uma cópia do tabuleiro."""
         new_board = Board(self.rows, self.cols)
         new_board.board = [[self.board[row][col] for col in range(self.cols + 1)] for row in range(self.rows + 1)]
+        new_board.num_battleships = self.num_battleships
+        new_board.num_cruisers = self.num_cruisers
+        new_board.num_destroyers = self.num_destroyers
+        new_board.num_submarines = self.num_submarines
         return new_board
     
     def set_value(self, row: int, col: int, value):
@@ -149,9 +158,51 @@ class Board:
             hint = from_input.readline().split()[1:]
             board.set_value(int(hint[0]), int(hint[1]), hint[2])
             if hint[2] != 'W':
+                board.hints.append((int(hint[0]), int(hint[1]), hint[2]))
                 board.lower_total(int(hint[0]), int(hint[1]))
 
+        board.remove_complete_hints()
         return board
+    
+    def remove_complete_hints(self):
+        for hint in self.hints:
+            row, col = hint[0], hint[1]
+            if self.get_value(row, col) == 'T':
+                if self.get_value(row + 1, col) == 'B':
+                    self.num_destroyers -= 1
+                    self.hints.remove(hint)
+                    self.hints.remove((row + 1, col, self.get_value(row + 1, col)))
+                elif self.get_value(row + 1, col) == 'M':
+                    if self.get_value(row + 2, col) == 'B':
+                        self.num_cruisers -= 1
+                        self.hints.remove(hint)
+                        self.hints.remove((row + 1, col, self.get_value(row + 1, col)))
+                        self.hints.remove((row + 2, col, self.get_value(row + 2, col)))
+                    if self.get_value(row + 2, col) == 'M':
+                        if self.get_value(row + 3, col) == 'B':
+                            self.num_battleships -= 1
+                            self.hints.remove(hint)
+                            self.hints.remove((row + 1, col, self.get_value(row + 1, col)))
+                            self.hints.remove((row + 2, col, self.get_value(row + 2, col)))
+                            self.hints.remove((row + 3, col, self.get_value(row + 3, col)))
+            elif self.get_value(row, col) == 'L':
+                if self.get_value(row, col + 1) == 'R':
+                    self.num_destroyers -= 1
+                    self.hints.remove(hint)
+                    self.hints.remove((row, col + 1, self.get_value(row, col + 1)))
+                elif self.get_value(row, col + 1) == 'M':
+                    if self.get_value(row, col + 2) == 'R':
+                        self.num_cruisers -= 1
+                        self.hints.remove(hint)
+                        self.hints.remove((row, col + 1, self.get_value(row, col + 1)))
+                        self.hints.remove((row, col + 2, self.get_value(row, col + 2)))
+                    if self.get_value(row, col + 2) == 'M':
+                        if self.get_value(row, col + 3) == 'R':
+                            self.num_battleships -= 1
+                            self.hints.remove(hint)
+                            self.hints.remove((row, col + 1, self.get_value(row, col + 1)))
+                            self.hints.remove((row, col + 2, self.get_value(row, col + 2)))
+                            self.hints.remove((row, col + 3, self.get_value(row, col + 3)))
 
     def print_board(self):
         """Imprime o tabuleiro no standard output (stdout)."""
@@ -172,61 +223,211 @@ class Bimaru(Problem):
         self.state = BimaruState(board)
         super().__init__(self.state)
 
-    def brute_force_actions(self, state: BimaruState):
+    def incomplete_ships(self, state: BimaruState):
+        """Devolve as ações possíveis para completar navios incompletos."""
         valid_actions = []
         board: Board = state.get_board()
-        for row in range(board.rows):
-            if board.get_row_total(row) <= 0:
-                continue
-            for col in range(board.cols):
-                if board.get_col_total(col) <= 0:
-                    continue
-                # Making sure at least one of the axies is empty
-                if board.adjacent_horizontal_values(row, col) not in EMPTY_ADJACENT \
-                and board.adjacent_vertical_values(row, col) not in EMPTY_ADJACENT:
-                    continue
-                # Making sure there are no adjacent tiles that would invalidate the creation of a ship
-                if board.get_value(row, col) is None \
-                and (col == 0 or board.adjacent_vertical_values(row, col - 1) in EMPTY_ADJACENT) \
-                and (col == board.cols - 1 or board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT) \
-                and board.get_value(row, col - 1) not in (RIGHT + TOP + BOTTOM + CIRCLE) \
-                and board.get_value(row, col + 1) not in (LEFT + TOP + BOTTOM + CIRCLE) \
-                and board.get_value(row - 1, col) not in (RIGHT + LEFT + BOTTOM + CIRCLE) \
-                and board.get_value(row + 1, col) not in (RIGHT + TOP + LEFT + CIRCLE):
+        hints = board.hints
+        for hint in hints:
+            row, col, hint_type = hint[0], hint[1], hint[2]
+            if hint_type == 'T':
+                if board.get_value(row + 1, col) is None:
+                    valid_actions.append((row + 1, col, 'b', 'v'))
+                    if board.get_value(row + 2, col) is None and board.adjacent_horizontal_values(row + 2, col) in EMPTY_ADJACENT \
+                    and board.adjacent_horizontal_values(row + 3, col) in EMPTY_ADJACENT and board.get_col_total(col) > 1 and board.get_row_total(row + 2) >= 1:
+                        if board.get_value(row + 3, col) is None:
+                            valid_actions.append((row + 1, col, 'mb', 'v'))
+                            if board.get_value(row + 4, col) is None and board.adjacent_horizontal_values(row + 4, col) in EMPTY_ADJACENT \
+                            and board.get_col_total(col) > 2 and board.get_row_total(row + 3) >= 1:
+                                valid_actions.append((row + 1, col, 'mmb', 'v'))
+                        elif board.get_value(row + 3, col) in BOTTOM:
+                            valid_actions.append((row + 1, col, 'mm', 'v'))
+
+                    elif board.get_value(row + 2, col) in MIDDLE:
+                        if board.get_value(row + 3, col) is None:
+                            valid_actions.append((row + 1, col, 'm b', 'v'))
+                        elif board.get_value(row + 3, col) in BOTTOM:
+                            valid_actions.append((row + 1, col, 'm', 'v'))
+
+                    elif board.get_value(row + 2, col) in BOTTOM:
+                        valid_actions.append((row + 1, col, 'm', 'v'))
+
+                elif board.get_value(row + 1, col) in MIDDLE:
+                    if board.get_value(row + 2, col) is None:
+                        valid_actions.append((row + 2, col, 'b', 'v'))
+                        if board.get_value(row + 3, col) is None and board.get_col_total(col) > 1 and board.get_row_total(row + 3) >= 1 \
+                        and board.get_value(row + 4, col) is None and board.adjacent_horizontal_values(row + 4, col) in EMPTY_ADJACENT:
+                            valid_actions.append((row + 2, col, 'mb', 'v'))
+                        elif board.get_value(row + 3, col) in BOTTOM:
+                            valid_actions.append((row + 2, col, 'm', 'v'))
+
+                    elif board.get_value(row + 2, col) in MIDDLE and board.get_value(row + 3, col) is None:
+                        valid_actions.append((row + 3, col, 'b', 'v'))
                     
-                    if board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
-                    and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
-                        valid_actions.append((row, col, 'c'))
+            elif hint_type == 'L':
+                if board.get_value(row, col + 1) is None:
+                    valid_actions.append((row, col + 1, 'r', 'h'))
+                    if board.get_value(row, col + 2) is None and board.adjacent_vertical_values(row, col + 2) in EMPTY_ADJACENT \
+                    and board.adjacent_vertical_values(row, col + 3) in EMPTY_ADJACENT and board.get_row_total(row) > 1 and board.get_col_total(col + 2) >= 1:
+                        if board.get_value(row, col + 3) is None:
+                            valid_actions.append((row, col + 1, 'mr', 'h'))
+                            if board.get_value(row, col + 4) is None and board.adjacent_vertical_values(row, col + 4) in EMPTY_ADJACENT \
+                            and board.get_row_total(row) > 2 and board.get_col_total(col + 3) >= 1:
+                                valid_actions.append((row, col + 1, 'mmr', 'h'))
+                        elif board.get_value(row, col + 3) in RIGHT:
+                            valid_actions.append((row, col + 1, 'mm', 'h'))
+                    elif board.get_value(row, col + 2) in MIDDLE:
+                        if board.get_value(row, col + 3) is None:
+                            valid_actions.append((row, col + 1, 'm r', 'h'))
+                        elif board.get_value(row, col + 3) in RIGHT:
+                            valid_actions.append((row, col + 1, 'm', 'h'))
+                    elif board.get_value(row, col + 2) in RIGHT:
+                        valid_actions.append((row, col + 1, 'm', 'h'))
+                elif board.get_value(row, col + 1) in MIDDLE:
+                    if board.get_value(row, col + 2) is None:
+                        valid_actions.append((row, col + 2, 'r', 'h'))
+                        if board.get_value(row, col + 3) is None and board.get_row_total(row) > 1 and board.get_col_total(col + 3) >= 1 \
+                        and board.get_value(row, col + 4) is None and board.adjacent_vertical_values(row, col + 4) in EMPTY_ADJACENT:
+                            valid_actions.append((row, col + 2, 'mr', 'h'))
+                        elif board.get_value(row, col + 3) in RIGHT:
+                            valid_actions.append((row, col + 2, 'm', 'h'))
+                    elif board.get_value(row, col + 2) in MIDDLE:
+                        valid_actions.append((row, col + 3, 'r', 'h'))
+ 
+            elif hint_type == 'R':
+                if board.get_value(row, col - 1) is None:
+                    valid_actions.append((row, col - 1, 'l', 'h'))
+                    if board.get_value(row, col - 2) is None and board.adjacent_vertical_values(row, col - 2) in EMPTY_ADJACENT \
+                    and board.adjacent_vertical_values(row, col - 3) in EMPTY_ADJACENT and board.get_row_total(row) > 1 and board.get_col_total(col - 2) >= 1:
+                        if board.get_value(row, col - 3) is None:
+                            valid_actions.append((row, col - 1, 'lm', 'h'))
+                            if board.get_value(row, col - 4) is None and board.adjacent_vertical_values(row, col - 4) in EMPTY_ADJACENT \
+                            and board.get_row_total(row) > 2 and board.get_col_total(col - 3) >= 1:
+                                valid_actions.append((row, col - 1, 'mml', 'h'))
+                        elif board.get_value(row, col - 3) in LEFT:
+                            valid_actions.append((row, col - 1, 'mm', 'h'))
+                    elif board.get_value(row, col - 2) in MIDDLE:
+                        if board.get_value(row, col - 3) is None:
+                            valid_actions.append((row, col - 1, 'l m', 'h'))
+                        elif board.get_value(row, col - 3) in LEFT:
+                            valid_actions.append((row, col - 1, 'm', 'h'))
+                    elif board.get_value(row, col - 2) in LEFT:
+                        valid_actions.append((row, col - 1, 'm', 'h'))
+                elif board.get_value(row, col - 1) in MIDDLE:
+                    if board.get_value(row, col - 2) is None:
+                        valid_actions.append((row, col - 2, 'l', 'h'))
+                        if board.get_value(row, col - 3) is None and board.get_row_total(row) > 1 and board.get_col_total(col - 3) >= 1 \
+                        and board.get_value(row, col - 4) is None and board.adjacent_vertical_values(row, col - 4) in EMPTY_ADJACENT:
+                            valid_actions.append((row, col - 2, 'lm', 'h'))
+            
+            elif hint_type == 'B':
+                if board.get_value(row - 1, col) is None:
+                    valid_actions.append((row - 1, col, 't', 'v'))
+                    if board.get_value(row - 2, col) is None and board.adjacent_horizontal_values(row - 2, col) in EMPTY_ADJACENT \
+                    and board.adjacent_horizontal_values(row - 3, col) in EMPTY_ADJACENT and board.get_col_total(col) > 1 and board.get_row_total(row - 2) >= 1:
+                        if board.get_value(row - 3, col) is None:
+                            valid_actions.append((row - 1, col, 'tm', 'v'))
+                            if board.get_value(row - 4, col) is None and board.adjacent_horizontal_values(row - 4, col) in EMPTY_ADJACENT \
+                            and board.get_col_total(col) > 2 and board.get_row_total(row - 3) >= 1:
+                                valid_actions.append((row - 1, col, 'tmm', 'v'))
+                        elif board.get_value(row - 3, col) in TOP:
+                            valid_actions.append((row - 1, col, 'mm', 'v'))
+                    elif board.get_value(row - 2, col) in MIDDLE:
+                        if board.get_value(row - 3, col) is None:
+                            valid_actions.append((row - 1, col, 't m', 'v'))
+                        elif board.get_value(row - 3, col) in TOP:
+                            valid_actions.append((row - 1, col, 'm', 'v'))
+                    elif board.get_value(row - 2, col) in TOP:
+                        valid_actions.append((row - 1, col, 'm', 'v'))
+                elif board.get_value(row - 1, col) in MIDDLE:
+                    if board.get_value(row - 2, col) is None:
+                        valid_actions.append((row - 2, col, 't', 'v'))
+                        if board.get_value(row - 3, col) is None and board.get_col_total(col) > 1 and board.get_row_total(row - 3) >= 1 \
+                        and board.get_value(row - 4, col) is None and board.adjacent_horizontal_values(row - 4, col) in EMPTY_ADJACENT:
+                            valid_actions.append((row - 2, col, 'tm', 'v'))
 
-                    # Trying to make a horizontal boat
-                    if board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
-                        if board.get_value(row, col - 1) in EMPTY_SPACE and col != board.cols - 1 \
-                        and board.get_value(row, col - 2) not in LEFT:
-                            valid_actions.append((row, col, 'l'))
-                        if board.get_value(row, col + 1) in EMPTY_SPACE and col != 0 \
-                        and board.get_value(row, col - 1) in LEFT + MIDDLE \
-                        and board.get_value(row, col + 2) not in RIGHT:
-                            valid_actions.append((row, col, 'r'))
-                        # FIX: THE NEXT LINE MIGHT NEED TO BE REMOVED
-                        # (since you can only make a middle if there is already a left)
-                        if board.get_value(row, col - 1) in LEFT + MIDDLE \
-                        and ((row, col) not in board.CORNER_COORDS):
-                            valid_actions.append((row, col, 'm'))
+            elif hint_type == 'M':
 
-                    # Trying to make a vertical boat
-                    if board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
-                        if board.get_value(row - 1, col) in EMPTY_SPACE and row != board.rows - 1 \
-                        and board.get_value(row - 2, col) not in TOP:
-                            valid_actions.append((row, col, 't'))
-                        if board.get_value(row + 1, col) in EMPTY_SPACE and row != 0 \
-                        and board.get_value(row, col - 1) in TOP + MIDDLE \
-                        and board.get_value(row + 2, col) not in BOTTOM:
-                            valid_actions.append((row, col, 'b'))
-                        # FIX: THE NEXT LINE MIGHT NEED TO BE REMOVED
-                        # (since you can only make a middle if there is already a top)
-                        if board.get_value(row - 1, col) in TOP + MIDDLE \
-                        and ((row, col) not in board.CORNER_COORDS):
-                            valid_actions.append((row, col, 'm'))
+                # horizontal
+
+                if col > 0 and col < board.cols - 1 and board.get_row_total(row) > 1 \
+                and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
+                    
+                    if board.get_value(row, col - 1) is None and board.get_col_total(col - 1) > 0 \
+                    and board.get_value(row, col + 1) is None and board.get_col_total(col + 1) > 0 \
+                    and board.adjacent_vertical_values(row, col - 1) in EMPTY_ADJACENT \
+                    and board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT:
+                        
+                        if board.get_value(row, col + 2) is None and board.adjacent_vertical_values(row, col + 2) in EMPTY_ADJACENT:
+                            if board.get_value(row, col - 2) is None and board.adjacent_vertical_values(row, col - 2) in EMPTY_ADJACENT:
+                                valid_actions.append((row, col - 1, 'l r', 'h'))
+                            elif board.get_value(row, col - 2) is None and board.get_col_total(col - 2) > 0 and board.get_row_total(row) > 2 \
+                            and board.get_value(row, col - 3) is None and board.adjacent_vertical_values(row, col - 3) in EMPTY_ADJACENT and row > 1:
+                                valid_actions.append((row, col - 2, 'lm r', 'h'))
+                            elif board.get_value(row, col + 2) is None and board.get_col_total(col + 2) > 0 and board.get_row_total(row) > 2 \
+                            and board.get_value(row, col + 3) is None and board.adjacent_vertical_values(row, col + 3) in EMPTY_ADJACENT and row > board.rows - 2:
+                                valid_actions.append((row, col - 1, 'l mr', 'h'))
+                            elif board.get_value(row, col - 2) in LEFT:
+                                valid_actions.append((row, col - 1, 'm r', 'h'))
+                        elif board.get_value(row, col + 2) in RIGHT and board.get_value(row, col - 2) is None \
+                        and board.adjacent_vertical_values(row, col - 2) in EMPTY_ADJACENT:
+                            valid_actions.append((row, col - 1, 'l m', 'h'))
+
+                    elif board.get_value(row, col + 1) in MIDDLE:
+                        if board.get_value(row, col - 1) in LEFT:
+                            valid_actions.append((row, col + 2, 'r', 'h'))
+                        elif board.get_value(row, col + 2) in RIGHT:
+                            valid_actions.append((row, col - 1, 'l', 'h'))
+                        else:
+                            valid_actions.append((row, col - 1, 'l  r', 'h'))
+
+                    elif board.get_value(row, col - 1) in MIDDLE:
+                        if board.get_value(row, col + 1) in LEFT:
+                            valid_actions.append((row, col - 2, 'l', 'h'))
+                        elif board.get_value(row, col - 2) in RIGHT:
+                            valid_actions.append((row, col + 1, 'r', 'h'))
+                        else:
+                            valid_actions.append((row, col - 2, 'l  r', 'h'))
+
+                # vertical
+
+                if board.get_col_total(col) > 1 and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
+                    if board.get_value(row - 1, col) is None and board.get_row_total(row - 1) > 0 \
+                    and board.get_value(row + 1, col) is None and board.get_row_total(row + 1) > 0 \
+                    and board.adjacent_horizontal_values(row - 1, col) in EMPTY_ADJACENT \
+                    and board.adjacent_horizontal_values(row + 1, col) in EMPTY_ADJACENT:
+                        
+                        if board.get_value(row + 2, col) is None and board.adjacent_horizontal_values(row + 2, col) in EMPTY_ADJACENT:
+                            if board.get_value(row - 2, col) is None and board.adjacent_horizontal_values(row - 2, col) in EMPTY_ADJACENT:
+                                valid_actions.append((row - 1, col, 't b', 'v'))
+                            elif board.get_value(row - 2, col) is None and board.get_row_total(row - 2) > 0 \
+                            and board.get_value(row - 3, col) is None and board.adjacent_horizontal_values(row - 3, col) in EMPTY_ADJACENT and col > 1:
+                                valid_actions.append((row - 2, col, 'tm b', 'v'))
+                            elif board.get_value(row + 2, col) is None and board.get_row_total(row + 2) > 0 \
+                            and board.get_value(row + 3, col) is None and board.adjacent_horizontal_values(row + 3, col) in EMPTY_ADJACENT and col > board.cols - 2:
+                                valid_actions.append((row - 1, col, 't mb', 'v'))
+                            elif board.get_value(row - 2, col) in TOP:
+                                valid_actions.append((row - 1, col, 'm b', 'v'))
+                        elif board.get_value(row + 2, col) in BOTTOM and board.get_value(row - 2, col) is None \
+                        and board.adjacent_horizontal_values(row - 2, col) in EMPTY_ADJACENT:
+                            valid_actions.append((row - 1, col, 't m', 'v'))
+
+                    elif board.get_value(row + 1, col) in MIDDLE:
+                        if board.get_value(row - 1, col) in TOP:
+                            valid_actions.append((row + 2, col, 'b', 'v'))
+                        elif board.get_value(row + 2, col) in BOTTOM:
+                            valid_actions.append((row - 1, col, 't', 'v'))
+                        else:
+                            valid_actions.append((row - 1, col, 't  b', 'v'))
+                    
+                    elif board.get_value(row - 1, col) in MIDDLE:
+                        if board.get_value(row + 1, col) in TOP:
+                            valid_actions.append((row - 2, col, 't', 'v'))
+                        elif board.get_value(row - 2, col) in BOTTOM:
+                            valid_actions.append((row + 1, col, 'b', 'v'))
+                        else:
+                            valid_actions.append((row + 1, col, 't  b', 'v'))
+
         return valid_actions
 
     def battleship_actions(self, state: BimaruState):
@@ -251,7 +452,7 @@ class Bimaru(Problem):
                 and board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT \
                 and board.adjacent_vertical_values(row, col + 2) in EMPTY_ADJACENT \
                 and board.adjacent_vertical_values(row, col + 3) in EMPTY_ADJACENT:
-                    valid_actions.append((row, col, 'lmmr'))
+                    valid_actions.append((row, col, 'lmmr', 'h'))
         # Try to place a vertical battleship
         for col in range(board.cols):
             if board.get_col_total(col) <= 3:
@@ -271,7 +472,7 @@ class Bimaru(Problem):
                 and board.adjacent_horizontal_values(row + 1, col) in EMPTY_ADJACENT \
                 and board.adjacent_horizontal_values(row + 2, col) in EMPTY_ADJACENT \
                 and board.adjacent_horizontal_values(row + 3, col) in EMPTY_ADJACENT:
-                    valid_actions.append((row, col, 'tmmb'))
+                    valid_actions.append((row, col, 'tmmb', 'v'))
         return valid_actions
 
     def cruiser_actions(self, state: BimaruState):
@@ -294,7 +495,7 @@ class Bimaru(Problem):
                 and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
                 and board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT \
                 and board.adjacent_vertical_values(row, col + 2) in EMPTY_ADJACENT:
-                    valid_actions.append((row, col, 'lmr'))
+                    valid_actions.append((row, col, 'lmr', 'h'))
         # Try to place a vertical cruiser
         for col in range(board.cols):
             if board.get_col_total(col) <= 2:
@@ -312,7 +513,7 @@ class Bimaru(Problem):
                 and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
                 and board.adjacent_horizontal_values(row + 1, col) in EMPTY_ADJACENT \
                 and board.adjacent_horizontal_values(row + 2, col) in EMPTY_ADJACENT:
-                    valid_actions.append((row, col, 'tmb'))
+                    valid_actions.append((row, col, 'tmb', 'v'))
         return valid_actions
     
     def destroyer_actions(self, state: BimaruState):
@@ -333,7 +534,7 @@ class Bimaru(Problem):
                 and board.get_value(row, col + 2) in EMPTY_SPACE)) \
                 and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
                 and board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT:
-                    valid_actions.append((row, col, 'lr'))
+                    valid_actions.append((row, col, 'lr', 'h'))
         # Try to place a vertical cruiser
         for col in range(board.cols):
             if board.get_col_total(col) <= 1:
@@ -349,7 +550,7 @@ class Bimaru(Problem):
                 and board.get_value(row + 2, col) in EMPTY_SPACE)) \
                 and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT \
                 and board.adjacent_horizontal_values(row + 1, col) in EMPTY_ADJACENT:
-                    valid_actions.append((row, col, 'tb'))
+                    valid_actions.append((row, col, 'tb', 'v'))
         return valid_actions
     
     def submarine_actions(self, state: BimaruState):
@@ -368,19 +569,27 @@ class Bimaru(Problem):
                 and (row == board.rows - 1 or board.adjacent_horizontal_values(row + 1, col) in EMPTY_ADJACENT) \
                 and board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT \
                 and board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
-                    valid_actions.append((row, col, 'c'))
+                    valid_actions.append((row, col, 'c', 's'))
         return valid_actions
 
 
     def actions(self, state: BimaruState):
         """Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento."""
-        actions = []
-        actions += self.battleship_actions(state)
-        actions += self.cruiser_actions(state)
-        actions += self.destroyer_actions(state)
-        actions += self.submarine_actions(state)
-        actions += self.brute_force_actions(state)
+        board: Board = state.get_board()
+        actions = self.incomplete_ships(state)
+        if actions != []:
+            return actions
+        actions = self.battleship_actions(state)
+        if actions != [] and board.num_battleships != 0:
+            return actions
+        actions = self.cruiser_actions(state)
+        if actions != [] and board.num_cruisers != 0:
+            return actions
+        actions = self.destroyer_actions(state)
+        if actions != [] and board.num_destroyers != 0:
+            return actions
+        actions = self.submarine_actions(state)
         return actions
 
 
@@ -391,11 +600,6 @@ class Bimaru(Problem):
         self.actions(state)."""
         board: Board = state.get_board()
         copy: Board = board.copy_board()
-        child_state: BimaruState = BimaruState(copy)
-        child_state.num_battleships = state.num_battleships
-        child_state.num_cruisers = state.num_cruisers
-        child_state.num_destroyers = state.num_destroyers
-        child_state.num_submarines = state.num_submarines
         if action not in self.actions(state):
             print("THE STATE'S ACTIONS ARE: " + self.actions(state))
             print("THE ACTION: " + action)
@@ -404,23 +608,25 @@ class Bimaru(Problem):
         row = action[0]
         col = action[1]
         move = action[2]
-
-        if move == 'c':
-            state.num_submarines -= 1
-        elif len(move) == 2:
-            state.num_destroyers -= 1
-        elif len(move) == 3:
-            state.num_cruisers -= 1
-        elif len(move) == 4:
-            state.num_battleships -= 1
+        direction = action[3]
         for x in move:
-            copy.set_value(int(row), int(col), str(x))
-            copy.lower_total(row, col)
-            if move[0] == 'l':
+            if x != ' ':
+                copy.set_value(int(row), int(col), str(x))
+                copy.lower_total(row, col)
+            if direction == 'h':
                 col += 1
-            elif move[0] == 't':
+            elif direction == 'v':
                 row += 1
-        child_state.get_board().print_board()
+        if len(move) == 1:
+            copy.num_submarines -= 1
+        elif len(move) == 2:
+            copy.num_destroyers -= 1
+        elif len(move) == 3:
+            copy.num_cruisers -= 1
+        elif len(move) == 4:
+            copy.num_battleships -= 1
+        child_state: BimaruState = BimaruState(copy)
+        print(child_state.board.print_board())
         return child_state
 
             
@@ -432,10 +638,10 @@ class Bimaru(Problem):
         if state is None:
             return False
         board: Board = state.get_board()
-        num_battleships = state.num_battleships
-        num_cruisers = state.num_cruisers
-        num_destroyers = state.num_destroyers
-        num_submarines = state.num_submarines
+        if board.num_submarines != 0 or board.num_destroyers != 0 or \
+        board.num_cruisers != 0 or board.num_battleships != 0:
+            print("NUMBER OF SHIPS ERROR") # DEBUG
+            return False
         for row in range(board.rows):
             if board.get_row_total(row) != 0:
                 print("ROW TOTAL ERROR") # DEBUG
@@ -444,16 +650,10 @@ class Bimaru(Problem):
                 if board.get_col_total(col) != 0:
                     print("COL TOTAL ERROR") # DEBUG
                     return False
-                """ THIS IS NOT A GOOD PLACE FOR THIS
-                if board.get_value(row, col) is None:
-                    board.set_value(row, col, '.') """ # FIX
-
+                
                 if board.get_value(row, col) not in EMPTY_SPACE:
-                    if board.get_value(row, col) in ['C', 'c']:
-                        num_submarines -= 1
-
                     # Horizontal tests
-                    elif board.get_value(row, col) in ['L', 'l']:
+                    if board.get_value(row, col) in ['L', 'l']:
                         if col >= board.cols - 1 or board.get_value(row, col + 1) not in ['M', 'm', 'R', 'r']:
                             print("L ERROR")
                             return False
@@ -465,12 +665,6 @@ class Bimaru(Problem):
                                 if col >= board.cols - 3 or board.get_value(row, col + 3) not in ['R', 'r']:
                                     print("L ERROR")
                                     return False
-                                if board.get_value(row, col + 3) in ['R', 'r']:
-                                    num_battleships -= 1
-                            elif board.get_value(row, col + 2) in ['R', 'r']:
-                                num_cruisers -= 1
-                        elif board.get_value(row, col + 1) in ['R', 'r']:
-                            num_destroyers -= 1
                     
                     # Vertical tests
                     elif board.get_value(row, col) in ['T', 't']:
@@ -485,80 +679,7 @@ class Bimaru(Problem):
                                 if row >= board.rows - 3 or board.get_value(row + 3, col) not in ['B', 'b']:
                                     print("T ERROR")
                                     return False
-                                if board.get_value(row + 3, col) in ['B', 'b']:
-                                    num_battleships -= 1
-                            elif board.get_value(row + 2, col) in ['B', 'b']:
-                                num_cruisers -= 1
-                        elif board.get_value(row + 1, col) in ['B', 'b']:
-                            num_destroyers -= 1
 
-
-
-
-
-
-
-
-
-
-
-
-
-                """ elif board.get_value(row, col) not in EMPTY_SPACE:
-
-                    if board.get_value(row, col) in ['C', 'c']:
-                        n_circles += 1
-                    elif board.adjacent_vertical_values(row, col) in EMPTY_ADJACENT and \
-                    board.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT:
-                        print("NON C EMPTY") # DEBUG
-                        return False
-                    elif board.get_value(row, col) in ['M', 'm']:
-                        n_middles += 1
-                        if board.get_value(row - 1, col) not in ['T', 't'] \
-                        and board.get_value(row + 1, col) not in ['B', 'b'] \
-                        and board.get_value(row, col - 1) not in ['L', 'l'] \
-                        and board.get_value(row, col + 1) not in ['R', 'r']:
-                            print("M ERROR") # DEBUG
-                            return False
-                    elif board.get_value(row, col) in ['T', 't']:
-                        n_t += 1
-                        if board.get_value(row + 1, col) not in ['B', 'b', 'M', 'm']:
-                            print("T ERROR") # DEBUG
-                            return False
-                        elif board.get_value(row + 1, col) in ['M', 'm']:
-                            if board.get_value(row + 2, col) not in ['B', 'b', 'M', 'm']:
-                                print("T ERROR") # DEBUG
-                                return False
-                            if board.get_value(row + 2, col) in ['M', 'm'] and \
-                            board.get_value(row + 3, col) not in ['B', 'b']:
-                                print("T ERROR") # DEBUG
-                                return False
-                    elif board.get_value(row, col) in ['B', 'b']:
-                        n_b += 1
-                        if board.get_value(row - 1, col) not in ['T', 't', 'M', 'm']:
-                            print("B ERROR") # DEBUG
-                    elif board.get_value(row, col) in ['L', 'l']:
-                        n_l += 1
-                        if board.get_value(row, col + 1) not in ['R', 'r', 'M', 'm']:
-                            print("L ERROR") # DEBUG
-                            return False
-                        elif board.get_value(row, col + 1) in ['M', 'm']:
-                            if board.get_value(row, col + 2) not in ['R', 'r', 'M', 'm']:
-                                print("L ERROR") # DEBUG
-                                return False
-                            if board.get_value(row, col + 2) in ['M', 'm'] and \
-                            board.get_value(row, col + 3) not in ['R', 'r']:
-                                print("L ERROR") # DEBUG
-                                return False
-                    elif board.get_value(row, col) in ['R', 'r']:
-                        n_r += 1
-                        if board.get_value(row, col - 1) not in ['L', 'l', 'M', 'm']:
-                            print("R ERROR") # DEBUG """
-
-        if num_submarines != 0 or num_destroyers != 0 or \
-        num_cruisers != 0 or num_battleships != 0:
-            print("NUMBER OF SHIPS ERROR") # DEBUG
-            return False
         return True
 
     def h(self, node: Node):
@@ -576,10 +697,10 @@ if __name__ == "__main__":
     # Imprimir para o standard output no formato indicado.
 
     problem = Bimaru(board)
-    
+
     print(problem.actions(problem.state))
 
     goal_node: Node = depth_first_tree_search(problem)
 
-    print("Is goal?", problem.goal_test(goal_node.state))
-    goal_node.state.get_board().print_board()
+    # print("Is goal?", problem.goal_test(goal_node.state))
+    # goal_node.state.get_board().print_board()
