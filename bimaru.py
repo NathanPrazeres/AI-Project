@@ -218,6 +218,18 @@ class Board:
                     print(self.get_value(row, col), end='')
             print()
 
+    def board_toString(self):
+        """Devolve o tabuleiro como uma string."""
+        string = ''
+        for row in range(self.rows):
+            for col in range(self.cols):
+                if self.get_value(row, col) is None:
+                    string += '.'
+                else:
+                    string += self.get_value(row, col)
+            string += '\n'
+        return string
+
 ####################################################################################################
 
 class Bimaru(Problem):
@@ -298,12 +310,12 @@ class Bimaru(Problem):
             elif hint_type == 'R':
                 if board.get_value(row, col - 1) is None:
                     if board.num_destroyers > 0:
-                        valid_actions.append((row, col - 1, 'l', 'h'))
-                    if board.get_value(row, col - 2) is None and board.adjacent_vertical_values(row, col - 2) in EMPTY_ADJACENT \
+                        valid_actions.append((row, col - 1, 'l ', 'h'))
+                    if col > 1 and board.get_value(row, col - 2) is None and board.adjacent_vertical_values(row, col - 2) in EMPTY_ADJACENT \
                     and board.adjacent_vertical_values(row, col - 3) in EMPTY_ADJACENT and board.get_row_total(row) > 1 and board.get_col_total(col - 2) >= 1:
                         if board.get_value(row, col - 3) is None:
                             valid_actions.append((row, col - 2, 'lm ', 'h'))
-                            if board.get_value(row, col - 4) is None and board.adjacent_vertical_values(row, col - 4) in EMPTY_ADJACENT \
+                            if col > 2 and board.get_value(row, col - 4) is None and board.adjacent_vertical_values(row, col - 4) in EMPTY_ADJACENT \
                             and board.get_row_total(row) > 2 and board.get_col_total(col - 3) >= 1:
                                 valid_actions.append((row, col - 3, 'lmm ', 'h'))
                         elif board.get_value(row, col - 3) in LEFT:
@@ -326,11 +338,11 @@ class Bimaru(Problem):
                 if board.get_value(row - 1, col) is None:
                     if board.num_destroyers > 0:
                         valid_actions.append((row - 1, col, 't ', 'v'))
-                    if board.get_value(row - 2, col) is None and board.adjacent_horizontal_values(row - 2, col) in EMPTY_ADJACENT \
+                    if row > 1 and board.get_value(row - 2, col) is None and board.adjacent_horizontal_values(row - 2, col) in EMPTY_ADJACENT \
                     and board.adjacent_horizontal_values(row - 3, col) in EMPTY_ADJACENT and board.get_col_total(col) > 1 and board.get_row_total(row - 2) >= 1:
                         if board.get_value(row - 3, col) is None:
                             valid_actions.append((row - 2, col, 'tm ', 'v'))
-                            if board.get_value(row - 4, col) is None and board.adjacent_horizontal_values(row - 4, col) in EMPTY_ADJACENT \
+                            if row > 2 and board.get_value(row - 4, col) is None and board.adjacent_horizontal_values(row - 4, col) in EMPTY_ADJACENT \
                             and board.get_col_total(col) > 2 and board.get_row_total(row - 3) >= 1:
                                 valid_actions.append((row - 3, col, 'tmm', 'v'))
                         elif board.get_value(row - 3, col) in TOP:
@@ -361,13 +373,13 @@ class Bimaru(Problem):
                     and board.adjacent_vertical_values(row, col - 1) in EMPTY_ADJACENT \
                     and board.adjacent_vertical_values(row, col + 1) in EMPTY_ADJACENT:
                         
-                        if board.get_value(row, col + 2) is None and board.adjacent_vertical_values(row, col + 2) in EMPTY_ADJACENT:
+                        if board.get_value(row, col + 2) in EMPTY_SPACE and board.adjacent_vertical_values(row, col + 2) in EMPTY_ADJACENT:
                             if board.get_value(row, col - 2) is None and board.adjacent_vertical_values(row, col - 2) in EMPTY_ADJACENT:
                                 valid_actions.append((row, col - 1, 'l r', 'h'))
-                            elif board.get_value(row, col - 2) is None and board.get_col_total(col - 2) > 0 and board.get_row_total(row) > 2 \
+                            if col > 2 and board.get_row_total(row) > 2 and board.get_value(row, col - 2) is None and board.get_col_total(col - 2) > 0 \
                             and board.get_value(row, col - 3) is None and board.adjacent_vertical_values(row, col - 3) in EMPTY_ADJACENT and row > 1:
                                 valid_actions.append((row, col - 2, 'lm r', 'h'))
-                            elif board.get_value(row, col + 2) is None and board.get_col_total(col + 2) > 0 and board.get_row_total(row) > 2 \
+                            if col < board.cols - 2 and board.get_row_total(row) > 2 and board.get_value(row, col + 2) is None and board.get_col_total(col + 2) > 0 \
                             and board.get_value(row, col + 3) is None and board.adjacent_vertical_values(row, col + 3) in EMPTY_ADJACENT and row > board.rows - 2:
                                 valid_actions.append((row, col - 1, 'l mr', 'h'))
                             elif board.get_value(row, col - 2) in LEFT:
@@ -400,13 +412,13 @@ class Bimaru(Problem):
                     and board.adjacent_horizontal_values(row - 1, col) in EMPTY_ADJACENT \
                     and board.adjacent_horizontal_values(row + 1, col) in EMPTY_ADJACENT:
                         
-                        if board.get_value(row + 2, col) is None and board.adjacent_horizontal_values(row + 2, col) in EMPTY_ADJACENT:
+                        if board.get_value(row + 2, col) in EMPTY_SPACE and board.adjacent_horizontal_values(row + 2, col) in EMPTY_ADJACENT:
                             if board.get_value(row - 2, col) is None and board.adjacent_horizontal_values(row - 2, col) in EMPTY_ADJACENT:
                                 valid_actions.append((row - 1, col, 't b', 'v'))
-                            elif board.get_value(row - 2, col) is None and board.get_row_total(row - 2) > 0 \
+                            if row > 1 and board.get_value(row - 2, col) is None and board.get_row_total(row - 2) > 0 \
                             and board.get_value(row - 3, col) is None and board.adjacent_horizontal_values(row - 3, col) in EMPTY_ADJACENT and col > 1:
                                 valid_actions.append((row - 2, col, 'tm b', 'v'))
-                            elif board.get_value(row + 2, col) is None and board.get_row_total(row + 2) > 0 \
+                            if row < board.rows - 2 and board.get_value(row + 2, col) is None and board.get_row_total(row + 2) > 0 \
                             and board.get_value(row + 3, col) is None and board.adjacent_horizontal_values(row + 3, col) in EMPTY_ADJACENT and col > board.cols - 2:
                                 valid_actions.append((row - 1, col, 't mb', 'v'))
                             elif board.get_value(row - 2, col) in TOP:
@@ -441,7 +453,8 @@ class Bimaru(Problem):
             if board.get_row_total(row) <= 3:
                 continue
             for col in range(board.cols - 3):
-                if board.get_col_total(col) <= 0:
+                if board.get_col_total(col) <= 0 or board.get_col_total(col + 1) <= 0 \
+                or board.get_col_total(col + 2) <= 0 or board.get_col_total(col + 3) <= 0:
                     continue
                 if board.get_value(row, col) is None \
                 and board.get_value(row, col + 1) is None \
@@ -461,7 +474,8 @@ class Bimaru(Problem):
             if board.get_col_total(col) <= 3:
                 continue
             for row in range(board.rows - 3):
-                if board.get_row_total(row) <= 0:
+                if board.get_row_total(row) <= 0 or board.get_row_total(row + 1) <= 0 \
+                or board.get_row_total(row + 2) <= 0 or board.get_row_total(row + 3) <= 0:
                     continue
                 if board.get_value(row, col) is None \
                 and board.get_value(row + 1, col) is None \
@@ -486,7 +500,7 @@ class Bimaru(Problem):
             if board.get_row_total(row) <= 2:
                 continue
             for col in range(board.cols - 2):
-                if board.get_col_total(col) <= 0:
+                if board.get_col_total(col) <= 0 or board.get_col_total(col + 1) <= 0 or board.get_col_total(col + 2) <= 0:
                     continue
                 if board.get_value(row, col) is None \
                 and board.get_value(row, col + 1) is None \
@@ -504,7 +518,7 @@ class Bimaru(Problem):
             if board.get_col_total(col) <= 2:
                 continue
             for row in range(board.rows - 2):
-                if board.get_row_total(row) <= 0:
+                if board.get_row_total(row) <= 0 or board.get_row_total(row + 1) <= 0 or board.get_row_total(row + 2) <= 0:
                     continue
                 if board.get_value(row, col) is None \
                 and board.get_value(row + 1, col) is None \
@@ -527,7 +541,7 @@ class Bimaru(Problem):
             if board.get_row_total(row) <= 1:
                 continue
             for col in range(board.cols - 1):
-                if board.get_col_total(col) <= 0:
+                if board.get_col_total(col) <= 0 or board.get_col_total(col + 1) <= 0:
                     continue
                 if board.get_value(row, col) is None \
                 and board.get_value(row, col + 1) is None \
@@ -543,7 +557,7 @@ class Bimaru(Problem):
             if board.get_col_total(col) <= 1:
                 continue
             for row in range(board.rows - 1):
-                if board.get_row_total(row) <= 0:
+                if board.get_row_total(row) <= 0 or board.get_row_total(row + 1) <= 0:
                     continue
                 if board.get_value(row, col) is None \
                 and board.get_value(row + 1, col) is None \
@@ -581,18 +595,15 @@ class Bimaru(Problem):
         partir do estado passado como argumento."""
         board: Board = state.get_board()
         actions = self.incomplete_ships(state)
-        if actions != []:
-            return actions
-        actions = self.battleship_actions(state)
-        if actions != [] and board.num_battleships != 0:
-            return actions
-        actions = self.cruiser_actions(state)
-        if actions != [] and board.num_cruisers != 0:
-            return actions
-        actions = self.destroyer_actions(state)
-        if actions != [] and board.num_destroyers != 0:
-            return actions
-        actions = self.submarine_actions(state)
+        if actions == [] and board.num_battleships > 0:
+            actions = self.battleship_actions(state)
+        elif actions == [] and board.num_cruisers > 0:
+            actions = self.cruiser_actions(state)
+        elif actions == [] and board.num_destroyers > 0:
+            actions = self.destroyer_actions(state)
+        elif actions == [] and board.num_submarines > 0:
+            actions = self.submarine_actions(state)
+        print("Battleships: " + str(board.num_battleships), "Cruisers: " + str(board.num_cruisers), "Destroyers: " + str(board.num_destroyers), "Submarines: " + str(board.num_submarines))
         return actions
 
 
@@ -604,27 +615,27 @@ class Bimaru(Problem):
         old_board: Board = state.get_board()
         copy: Board = old_board.copy_board()
         child_state: BimaruState = BimaruState(copy)
-        if action in self.actions(state):
-            row = action[0]
-            col = action[1]
-            move = action[2]
-            direction = action[3]
-            for x in move:
-                if x != ' ':
-                    child_state.board.set_value(int(row), int(col), str(x))
-                    child_state.board.lower_total(row, col)
-                if direction == 'h':
-                    col += 1
-                elif direction == 'v':
-                    row += 1
-            if len(move) == 1:
-                child_state.board.num_submarines -= 1
-            elif len(move) == 2:
-                child_state.board.num_destroyers -= 1
-            elif len(move) == 3:
-                child_state.board.num_cruisers -= 1
-            elif len(move) == 4:
-                child_state.board.num_battleships -= 1
+        row = action[0]
+        col = action[1]
+        move = action[2]
+        direction = action[3]
+        for x in move:
+            if x != ' ':
+                child_state.board.set_value(int(row), int(col), str(x))
+                child_state.board.lower_total(row, col)
+            if direction == 'h':
+                col += 1
+            elif direction == 'v':
+                row += 1
+        if len(move) == 1:
+            child_state.board.num_submarines -= 1
+        elif len(move) == 2:
+            child_state.board.num_destroyers -= 1
+        elif len(move) == 3:
+            child_state.board.num_cruisers -= 1
+        elif len(move) == 4:
+            child_state.board.num_battleships -= 1
+        print(child_state.board.print_board())
         return child_state
 
             
@@ -687,7 +698,6 @@ if __name__ == "__main__":
 
     problem = Bimaru(board)
 
-    print(problem.actions(problem.state))
 
     goal_node: Node = depth_first_tree_search(problem)
 
