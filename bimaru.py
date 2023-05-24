@@ -603,7 +603,6 @@ class Bimaru(Problem):
             actions = self.destroyer_actions(state)
         elif actions == [] and board.num_submarines > 0:
             actions = self.submarine_actions(state)
-        print("Battleships: " + str(board.num_battleships), "Cruisers: " + str(board.num_cruisers), "Destroyers: " + str(board.num_destroyers), "Submarines: " + str(board.num_submarines))
         return actions
 
 
@@ -635,7 +634,6 @@ class Bimaru(Problem):
             child_state.board.num_cruisers -= 1
         elif len(move) == 4:
             child_state.board.num_battleships -= 1
-        print(child_state.board.print_board())
         return child_state
 
             
@@ -656,30 +654,6 @@ class Bimaru(Problem):
             for col in range(board.cols):
                 if board.get_col_total(col) != 0:
                     return False
-                
-                if board.get_value(row, col) not in EMPTY_SPACE:
-                    # Horizontal tests
-                    if board.get_value(row, col) in ['L', 'l']:
-                        if col >= board.cols - 1 or board.get_value(row, col + 1) not in ['M', 'm', 'R', 'r']:
-                            return False
-                        if board.get_value(row, col + 1) in ['M', 'm']:
-                            if col >= board.cols - 2 or board.get_value(row, col + 2) not in ['M', 'm', 'R', 'r']:
-                                return False
-                            if board.get_value(row, col + 2) in ['M', 'm']:
-                                if col >= board.cols - 3 or board.get_value(row, col + 3) not in ['R', 'r']:
-                                    return False
-                    
-                    # Vertical tests
-                    elif board.get_value(row, col) in ['T', 't']:
-                        if row >= board.rows - 1 or board.get_value(row + 1, col) not in ['M', 'm', 'B', 'b']:
-                            return False
-                        if board.get_value(row + 1, col) in ['M', 'm']:
-                            if row >= board.rows - 2 or board.get_value(row + 2, col) not in ['M', 'm', 'B', 'b']:
-                                return False
-                            if board.get_value(row + 2, col) in ['M', 'm']:
-                                if row >= board.rows - 3 or board.get_value(row + 3, col) not in ['B', 'b']:
-                                    return False
-
         return True
 
     def h(self, node: Node):
@@ -698,8 +672,6 @@ if __name__ == "__main__":
 
     problem = Bimaru(board)
 
-
     goal_node: Node = depth_first_tree_search(problem)
 
-    print("Is goal?", problem.goal_test(goal_node.state))
     goal_node.state.get_board().print_board()
