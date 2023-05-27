@@ -80,7 +80,7 @@ class Board:
         return self.board[row][col]
     
     def fill_pos_water(self, row: int, col: int, value: str):
-        if value in (TOP + BOTTOM + LEFT + RIGHT + MIDDLE + CIRCLE):
+        if not value in EMPTY_SPACE:
             if row > 0:
                 if col > 0 and self.board[row-1][col-1] != 'W':
                     self.board[row-1][col-1] = '.'
@@ -90,7 +90,7 @@ class Board:
                 if col > 0 and self.board[row+1][col-1] != 'W':
                     self.board[row+1][col-1] = '.'
                 if col < self.cols-1 and self.board[row+1][col+1] != 'W':
-                    self.board[row+1][col+1] = '.'
+                    self.board[row+1][col+1] = '.'    
         if value in TOP:
             if row > 0 and self.board[row-1][col] != 'W':
                 self.board[row-1][col] = '.'
@@ -104,7 +104,7 @@ class Board:
                     self.board[row][col+1] = '.'
                 if row < self.rows-2 and self.board[row+2][col+1] != 'W':
                     self.board[row+2][col+1] = '.'
-        if value in BOTTOM:
+        elif value in BOTTOM:
             if row < self.rows-1 and self.board[row+1][col] != 'W':
                 self.board[row+1][col] = '.'
             if col > 0:
@@ -117,7 +117,7 @@ class Board:
                     self.board[row][col+1] = '.'
                 if row > 1 and self.board[row-2][col+1] != 'W':
                     self.board[row-2][col+1] = '.'
-        if value in LEFT:
+        elif value in LEFT:
             if col > 0 and self.board[row][col-1] != 'W':
                 self.board[row][col-1] = '.'
             if row > 0:
@@ -130,7 +130,7 @@ class Board:
                     self.board[row+1][col] = '.'
                 if col < self.cols-2 and self.board[row+1][col+2] != 'W':
                     self.board[row+1][col+2] = '.'
-        if value in RIGHT:
+        elif value in RIGHT:
             if col < self.cols-1 and self.board[row][col+1] != 'W':
                 self.board[row][col+1] = '.'
             if row > 0:
@@ -143,7 +143,7 @@ class Board:
                     self.board[row+1][col] = '.'
                 if col > 1 and self.board[row+1][col-2] != 'W':
                         self.board[row+1][col-2] = '.'
-        if value in CIRCLE:
+        elif value in CIRCLE:
             if row > 0 and self.get_value(row-1, col) != 'W':
                 self.set_value(row-1, col, '.')
             if row < self.rows-1 and self.get_value(row+1, col) != 'W':
@@ -158,7 +158,7 @@ class Board:
             for col in range(self.cols):
                 if (self.get_row_total(row) == 0 or self.get_col_total(col) == 0) and self.get_value(row, col) is None:
                     self.set_value(row, col, '.')
-                if self.get_value(row, col) not in EMPTY_SPACE:
+                elif self.get_value(row, col) not in EMPTY_SPACE:
                     if self.get_value(row, col) in MIDDLE:
                         # If M/m is connected to a horizontal boat
                         if not self.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT and self.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
@@ -248,8 +248,8 @@ class Board:
                 board.hints.append((int(hint[0]), int(hint[1]), hint[2]))
                 board.lower_total(int(hint[0]), int(hint[1]))
 
-        board.fill_board_water()
         board.remove_complete_hints()
+        board.fill_board_water()
         return board
     
     def remove_complete_hints(self):
@@ -311,7 +311,7 @@ class Board:
         for row in range(self.rows):
             for col in range(self.cols):
                 if self.get_value(row, col) is None:
-                    print('!', end='')
+                    print('!', end='') #DEBUG
                 else:
                     print(self.get_value(row, col), end='')
             print()
@@ -369,11 +369,11 @@ class Bimaru(Problem):
                 if board.get_value(row, col + 1) is None:
                     if board.get_value(row, col + 2) in EMPTY_SPACE:
                         if board.get_value(row, col + 3) != 'R':
-                            valid_actions.insert(0, (row, col, ' r', 'h'))
+                            valid_actions.insert(-1, (row, col, ' r', 'h'))
                         if col < board.cols - 2 and board.get_value(row, col + 2) is None:
                             if board.get_value(row, col + 3) in EMPTY_SPACE:
                                 if board.get_row_total(row) > 1:
-                                    valid_actions.insert(0, (row, col, ' mr', 'h'))
+                                    valid_actions.insert(-1, (row, col, ' mr', 'h'))
                                 if col < board.cols - 3 and board.get_value(row, col + 3) is None and board.get_row_total(row) > 2:
                                     valid_actions.insert(0, (row, col, ' mmr', 'h'))
                             elif board.get_value(row, col + 3) == 'R':
@@ -384,11 +384,11 @@ class Bimaru(Problem):
                         elif board.get_value(row, col + 3) == 'R':
                             valid_actions.insert(0, (row, col, ' m  ', 'h'))
                     elif board.get_value(row, col + 2) == 'R':
-                        valid_actions.insert(0, (row, col, ' m ', 'h'))
+                        valid_actions.insert(-1, (row, col, ' m ', 'h'))
                 elif board.get_value(row, col + 1) == 'M':
                     if board.get_value(row, col + 2) is None:
                         if board.get_value(row, col + 3) in EMPTY_SPACE:
-                            valid_actions.insert(0, (row, col, '  r', 'h'))
+                            valid_actions.insert(-1, (row, col, '  r', 'h'))
                             if col < board.cols - 3 and board.get_value(row, col + 3) is None and board.get_row_total(row) > 1:
                                 valid_actions.insert(0, (row, col, '  mr', 'h'))
                         elif board.get_value(row, col + 3) == 'R':
@@ -400,11 +400,11 @@ class Bimaru(Problem):
             and not board.get_value(row - 2, col) in ['T', 'M'] and board.get_value(row - 3, col) != 'T':
                 if board.get_value(row - 1, col) is None:
                     if board.get_value(row - 2, col) in EMPTY_SPACE:
-                        valid_actions.insert(0, (row - 1, col, 't ', 'v'))
+                        valid_actions.insert(-1, (row - 1, col, 't ', 'v'))
                     if row > 1 and board.get_value(row - 2, col) is None:
                         if board.get_value(row - 3, col) in EMPTY_SPACE:
                             if board.get_col_total(col) > 1:
-                                valid_actions.insert(0, (row - 2, col, 'tm ', 'v'))
+                                valid_actions.insert(-1, (row - 2, col, 'tm ', 'v'))
                             if row > 2 and board.get_value(row - 3, col) is None and board.get_col_total(col) > 2:
                                 valid_actions.insert(0, (row - 3, col, 'tmm ', 'v'))
 
@@ -412,11 +412,11 @@ class Bimaru(Problem):
             and not board.get_value(row, col - 2) in ['L', 'M'] and board.get_value(row, col - 3) != 'L':
                 if board.get_value(row, col - 1) is None:
                     if board.get_value(row, col - 2) in EMPTY_SPACE:
-                        valid_actions.insert(0, (row, col - 1, 'l ', 'h'))
+                        valid_actions.insert(-1, (row, col - 1, 'l ', 'h'))
                     if col > 1 and board.get_value(row, col - 2) is None:
                         if board.get_value(row, col - 3) in EMPTY_SPACE:
                             if board.get_row_total(row) > 1:
-                                valid_actions.insert(0, (row, col - 2, 'lm ', 'h'))
+                                valid_actions.insert(-1, (row, col - 2, 'lm ', 'h'))
                             if col > 2 and board.get_value(row, col - 3) is None and board.get_row_total(row) > 2:
                                 valid_actions.insert(0, (row, col - 3, 'lmm ', 'h'))
                     
@@ -425,7 +425,7 @@ class Bimaru(Problem):
                 if row > 0 and row < board.rows - 1:
                     if board.get_value(row - 1, col) is None and board.get_value(row - 2, col) in EMPTY_SPACE:
                         if board.get_value(row + 1, col) == 'B':
-                            valid_actions.insert(0, (row - 1, col, 't  ', 'v'))
+                            valid_actions.insert(-1, (row - 1, col, 't  ', 'v'))
                             if row > 1 and board.get_col_total(col) > 1 and board.get_value(row - 2, col) is None and board.get_value(row - 3, col) in EMPTY_SPACE:
                                 valid_actions.insert(0, (row - 2, col, 'tm  ', 'v'))
                         elif board.get_value(row + 1, col) == 'M' and board.get_value(row + 2, col) == 'B':
@@ -433,7 +433,7 @@ class Bimaru(Problem):
                         if board.get_col_total(col) > 1:
                             if board.get_value(row + 1, col) is None:
                                 if board.get_value(row + 2, col) in EMPTY_SPACE:
-                                    valid_actions.insert(0, (row - 1, col, 't b', 'v'))
+                                    valid_actions.insert(-1, (row - 1, col, 't b', 'v'))
                                     if board.get_col_total(col) > 2:
                                         if row > 1 and board.get_value(row - 2, col) is None and board.get_value(row - 3, col) in EMPTY_SPACE:
                                             valid_actions.insert(0, (row - 2, col, 'tm b', 'v'))
@@ -448,7 +448,7 @@ class Bimaru(Problem):
                 if col > 0 and col < board.cols - 1:
                     if board.get_value(row, col - 1) is None and board.get_value(row, col - 2) in EMPTY_SPACE:
                         if board.get_value(row, col + 1) == 'R':
-                            valid_actions.insert(0, (row, col - 1, 'l  ', 'h'))
+                            valid_actions.insert(-1, (row, col - 1, 'l  ', 'h'))
                             if col > 1 and board.get_row_total(row) > 1 and board.get_value(row, col - 2) is None and board.get_value(row, col - 3) in EMPTY_SPACE:
                                 valid_actions.insert(0, (row, col - 2, 'lm  ', 'h'))
                         elif board.get_value(row, col + 1) == 'M' and board.get_value(row, col + 2) == 'R':
@@ -456,7 +456,7 @@ class Bimaru(Problem):
                         if board.get_row_total(row) > 1:
                             if board.get_value(row, col + 1) is None:
                                 if board.get_value(row, col + 2) in EMPTY_SPACE:
-                                    valid_actions.insert(0, (row, col - 1, 'l r', 'h'))
+                                    valid_actions.insert(-1, (row, col - 1, 'l r', 'h'))
                                     if board.get_row_total(row) > 2:
                                         if col > 1 and board.get_value(row, col - 2) is None and board.get_value(row, col - 3) in EMPTY_SPACE:
                                             valid_actions.insert(0, (row, col - 2, 'lm r', 'h'))
@@ -466,123 +466,47 @@ class Bimaru(Problem):
                                     valid_actions.insert(0, (row, col - 1, 'l m ', 'h'))
                             elif board.get_value(row, col + 1) == 'M' and board.get_value(row, col + 2) is None:
                                 valid_actions.insert(0, (row, col - 1, 'l  r', 'h'))
-
-                    
-
-        if len(valid_actions) != 0:
-            valid_actions.sort(key=lambda x: len(x[2]))
         return valid_actions
 
-    def battleship_actions(self, state: BimaruState):
-        valid_actions = []
+    def complete_ships(self, state: BimaruState):
         board: Board = state.get_board()
-        # Try to place a horizinatal battleship
-        for row in range(board.rows):
-            if board.get_row_total(row) <= 3:
-                continue
-            for col in range(board.cols - 3):
-                if board.get_col_total(col) <= 0 or board.get_col_total(col + 1) <= 0 \
-                or board.get_col_total(col + 2) <= 0 or board.get_col_total(col + 3) <= 0:
-                    continue
-                if board.get_value(row, col) is None \
-                and board.get_value(row, col + 1) is None \
-                and board.get_value(row, col + 2) is None \
-                and board.get_value(row, col + 3) is None:
-                    valid_actions.append((row, col, 'lmmr', 'h'))
-        # Try to place a vertical battleship
-        for col in range(board.cols):
-            if board.get_col_total(col) <= 3:
-                continue
-            for row in range(board.rows - 3):
-                if board.get_row_total(row) <= 0 or board.get_row_total(row + 1) <= 0 \
-                or board.get_row_total(row + 2) <= 0 or board.get_row_total(row + 3) <= 0:
-                    continue
-                if board.get_value(row, col) is None \
-                and board.get_value(row + 1, col) is None \
-                and board.get_value(row + 2, col) is None \
-                and board.get_value(row + 3, col) is None:
-                    valid_actions.append((row, col, 'tmmb', 'v'))
-        return valid_actions
-
-    def cruiser_actions(self, state: BimaruState):
         valid_actions = []
-        board: Board = state.get_board()
-        # Try to place a horizinatal cruiser
         for row in range(board.rows):
-            if board.get_row_total(row) <= 2:
-                continue
-            for col in range(board.cols - 2):
-                if board.get_col_total(col) <= 0 or board.get_col_total(col + 1) <= 0 or board.get_col_total(col + 2) <= 0:
-                    continue
-                if board.get_value(row, col) is None \
-                and board.get_value(row, col + 1) is None \
-                and board.get_value(row, col + 2) is None:
-                    valid_actions.append((row, col, 'lmr', 'h'))
-        # Try to place a vertical cruiser
-        for col in range(board.cols):
-            if board.get_col_total(col) <= 2:
-                continue
-            for row in range(board.rows - 2):
-                if board.get_row_total(row) <= 0 or board.get_row_total(row + 1) <= 0 or board.get_row_total(row + 2) <= 0:
-                    continue
-                if board.get_value(row, col) is None \
-                and board.get_value(row + 1, col) is None \
-                and board.get_value(row + 2, col) is None:
-                    valid_actions.append((row, col, 'tmb', 'v'))
-        return valid_actions
-    
-    def destroyer_actions(self, state: BimaruState):
-        valid_actions = []
-        board: Board = state.get_board()
-        # Try to place a horizinatal cruiser
-        for row in range(board.rows):
-            if board.get_row_total(row) <= 1:
-                continue
-            for col in range(board.cols - 1):
-                if board.get_col_total(col) <= 0 or board.get_col_total(col + 1) <= 0:
-                    continue
-                if board.get_value(row, col) is None \
-                and board.get_value(row, col + 1) is None:
-                    valid_actions.append((row, col, 'lr', 'h'))
-        # Try to place a vertical cruiser
-        for col in range(board.cols):
-            if board.get_col_total(col) <= 1:
-                continue
-            for row in range(board.rows - 1):
-                if board.get_row_total(row) <= 0 or board.get_row_total(row + 1) <= 0:
-                    continue
-                if board.get_value(row, col) is None \
-                and board.get_value(row + 1, col) is None:
-                    valid_actions.append((row, col, 'tb', 'v'))
-        return valid_actions
-    
-    def submarine_actions(self, state: BimaruState):
-        valid_actions = []
-        board: Board = state.get_board()
-        for row in range(board.rows):
-            if board.get_row_total(row) <= 0:
-                continue
             for col in range(board.cols):
-                if board.get_col_total(col) <= 0:
-                    continue
-                if board.get_value(row, col) is None:
-                    valid_actions.append((row, col, 'c', ''))
+                if board.num_battleships > 0:
+                    if row < board.rows - 3 and board.get_col_total(col) > 3 and board.get_value(row, col) is None \
+                    and board.get_value(row + 1, col) is None and board.get_value(row + 2, col) is None and board.get_value(row + 3, col) is None:
+                        valid_actions.append((row, col, 'tmmb', 'v'))
+                    if col < board.cols - 3 and board.get_row_total(row) > 3 and board.get_value(row, col) is None \
+                        and board.get_value(row, col + 1) is None and board.get_value(row, col + 2) is None and board.get_value(row, col + 3) is None:
+                        valid_actions.append((row, col, 'lmmr', 'h'))
+                elif board.num_cruisers > 0:
+                    if row < board.rows - 2 and board.get_col_total(col) > 2 and board.get_value(row, col) is None \
+                    and board.get_value(row + 1, col) is None and board.get_value(row + 2, col) is None:
+                        valid_actions.append((row, col, 'tmb', 'v'))
+                    if col < board.cols - 2 and board.get_row_total(row) > 2 and board.get_value(row, col) is None \
+                        and board.get_value(row, col + 1) is None and board.get_value(row, col + 2) is None:
+                        valid_actions.append((row, col, 'lmr', 'h'))
+                elif board.num_destroyers > 0:
+                    if row < board.rows - 1 and board.get_col_total(col) > 1 and board.get_value(row, col) is None \
+                    and board.get_value(row + 1, col) is None:
+                        valid_actions.append((row, col, 'tb', 'v'))
+                    if col < board.cols - 1 and board.get_row_total(row) > 1 and board.get_value(row, col) is None \
+                        and board.get_value(row, col + 1) is None:
+                        valid_actions.append((row, col, 'lr', 'h'))
+                elif board.num_submarines > 0:
+                    if board.get_value(row, col) is None and board.get_col_total(col) > 0 and board.get_row_total(row) > 0:
+                        valid_actions.append((row, col, 'c', ''))
         return valid_actions
-
 
     def actions(self, state: BimaruState):
         """Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento."""
         board: Board = state.get_board()
         actions = self.incomplete_ships(state)
-        if actions == [] and board.num_battleships > 0:
-            actions = self.battleship_actions(state)
-        elif actions == [] and board.num_cruisers > 0:
-            actions = self.cruiser_actions(state)
-        elif actions == [] and board.num_destroyers > 0:
-            actions = self.destroyer_actions(state)
-        elif actions == [] and board.num_submarines > 0:
-            actions = self.submarine_actions(state)
+        if actions == [] and (board.num_battleships + board.num_cruisers + board.num_destroyers + board.num_submarines) > 0:
+            actions = self.complete_ships(state)
+        print(actions) # DEBUG
         return actions
 
 
@@ -615,6 +539,7 @@ class Bimaru(Problem):
         elif len(move) == 4:
             child_state.board.num_battleships -= 1
         child_state.board.fill_board_water()
+        child_state.board.print_board() # DEBUG
         return child_state           
 
     def goal_test(self, state: BimaruState):
