@@ -161,7 +161,7 @@ class Board:
                 elif self.get_value(row, col) not in EMPTY_SPACE:
                     if self.get_value(row, col) in MIDDLE:
                         # If M/m is connected to a horizontal boat
-                        if not self.adjacent_horizontal_values(row, col) in EMPTY_ADJACENT and self.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
+                        if not self.adjacent_horizontal_values(row, col) == (None, None) and self.adjacent_vertical_values(row, col) in EMPTY_ADJACENT:
                             if row > 0:
                                 if self.get_value(row-1, col) != 'W':
                                     self.set_value(row-1, col, '.')
