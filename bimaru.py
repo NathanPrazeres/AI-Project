@@ -18,13 +18,13 @@ from search import (
 )
 
 
-TOP = ('T', 't')
-BOTTOM = ('B', 'b')
-LEFT = ('L', 'l')
-RIGHT = ('R', 'r')
-MIDDLE = ('M', 'm')
-CIRCLE = ('C', 'c')
-EMPTY_SPACE = (None, '.', 'W')
+TOP = ['T', 't']
+BOTTOM = ['B', 'b']
+LEFT = ['L', 'l']
+RIGHT = ['R', 'r']
+MIDDLE = ['M', 'm']
+CIRCLE = ['C', 'c']
+EMPTY_SPACE = [None, '.', 'W']
 EMPTY_ADJACENT = [(x, y) for x in EMPTY_SPACE for y in EMPTY_SPACE]
 
 class BimaruState:
@@ -80,144 +80,163 @@ class Board:
             return None
         return self.board[row][col]
     
-    def fill_pos_water(self, row: int, col: int, value: str):
+    def fill_pos_water(self, row: int, col: int, value: str) -> bool:
+        made_changes = False
         if not value in EMPTY_SPACE:
             if row > 0:
-                if col > 0 and self.board[row-1][col-1] != 'W':
+                if col > 0 and self.board[row-1][col-1] is None:
                     self.board[row-1][col-1] = '.'
-                if col < self.cols-1 and self.board[row-1][col+1] != 'W':
+                    made_changes = True
+                if col < self.cols-1 and self.board[row-1][col+1] is None:
                     self.board[row-1][col+1] = '.'
+                    made_changes = True
             if row < self.rows-1:
-                if col > 0 and self.board[row+1][col-1] != 'W':
+                if col > 0 and self.board[row+1][col-1] is None:
                     self.board[row+1][col-1] = '.'
-                if col < self.cols-1 and self.board[row+1][col+1] != 'W':
-                    self.board[row+1][col+1] = '.'    
+                    made_changes = True
+                if col < self.cols-1 and self.board[row+1][col+1] is None:
+                    self.board[row+1][col+1] = '.'
+                    made_changes = True
         if value in TOP:
-            self.board[row+1][col] = 'x'
-            if row > 0 and self.board[row-1][col] != 'W':
+            if self.board[row+1][col] is None:
+                self.board[row+1][col] = 'x'
+                self.lower_total(row+1, col)
+                made_changes = True
+            if row > 0 and self.board[row-1][col] is None:
                 self.board[row-1][col] = '.'
-            if col > 0:
-                if self.board[row][col-1] != 'W':
-                    self.board[row][col-1] = '.'
-                if row < self.rows-2 and self.board[row+2][col-1] != 'W':
-                    self.board[row+2][col-1] = '.'
-            if col < self.cols-1:
-                if self.board[row][col+1] != 'W':
-                    self.board[row][col+1] = '.'
-                if row < self.rows-2 and self.board[row+2][col+1] != 'W':
-                    self.board[row+2][col+1] = '.'
+                made_changes = True
         elif value in BOTTOM:
-            self.board[row-1][col] = 'x'
-            if row < self.rows-1 and self.board[row+1][col] != 'W':
+            if self.board[row-1][col] is None:
+                self.board[row-1][col] = 'x'
+                self.lower_total(row-1, col)
+                made_changes = True
+            if row < self.rows-1 and self.board[row+1][col] is None:
                 self.board[row+1][col] = '.'
-            if col > 0:
-                if self.board[row][col-1] != 'W':
-                    self.board[row][col-1] = '.'
-                if row > 1 and self.board[row-2][col-1] != 'W':
-                    self.board[row-2][col-1] = '.'
-            if col < self.cols-1:
-                if self.board[row][col+1] != 'W':
-                    self.board[row][col+1] = '.'
-                if row > 1 and self.board[row-2][col+1] != 'W':
-                    self.board[row-2][col+1] = '.'
+                made_changes = True
         elif value in LEFT:
-            self.board[row][col+1] = 'x'
-            if col > 0 and self.board[row][col-1] != 'W':
+            if self.board[row][col+1] is None:
+                self.board[row][col+1] = 'x'
+                self.lower_total(row, col+1)
+                made_changes = True
+            if col > 0 and self.board[row][col-1] is None:
                 self.board[row][col-1] = '.'
-            if row > 0:
-                if self.board[row-1][col] != 'W':
-                    self.board[row-1][col] = '.'
-                if col < self.cols-2 and self.board[row-1][col+2] != 'W':
-                    self.board[row-1][col+2] = '.'
-            if row < self.rows-1:
-                if self.board[row+1][col] != 'W':
-                    self.board[row+1][col] = '.'
-                if col < self.cols-2 and self.board[row+1][col+2] != 'W':
-                    self.board[row+1][col+2] = '.'
+                made_changes = True
         elif value in RIGHT:
-            self.board[row][col-1] = 'x'
-            if col < self.cols-1 and self.board[row][col+1] != 'W':
+            if self.board[row][col-1] is None:
+                self.board[row][col-1] = 'x'
+                self.lower_total(row, col-1)
+                made_changes = True
+            if col < self.cols-1 and self.board[row][col+1] is None:
                 self.board[row][col+1] = '.'
-            if row > 0:
-                if self.board[row-1][col] != 'W':
-                    self.board[row-1][col] = '.'
-                if col > 1 and self.board[row-1][col-2] != 'W':
-                        self.board[row-1][col-2] = '.'
-            if row < self.rows-1:
-                if self.board[row+1][col] != 'W':
-                    self.board[row+1][col] = '.'
-                if col > 1 and self.board[row+1][col-2] != 'W':
-                        self.board[row+1][col-2] = '.'
+                made_changes = True
         elif value in MIDDLE:
             # Horizontal
             if row == 0 or row == self.rows-1 or self.board[row-1][col] in ('.', 'W') or self.board[row+1][col] in ('.', 'W'):
-                self.board[row][col-1] = 'x'
-                self.board[row][col+1] = 'x'
-                if row < self.rows-1:
-                    if self.board[row+1][col] is None:
-                        self.board[row+1][col] = '.'
-                    if col > 1 and self.board[row+1][col-2] is None:
-                        self.board[row+1][col-2] = '.'
-                    if col < self.cols-2 and self.board[row+1][col+2] is None:
-                        self.board[row+1][col+2] = '.'
-                if row > 0:
-                    if self.board[row-1][col] is None:
-                        self.board[row-1][col] = '.'
-                    if col > 1 and self.board[row-1][col-2] is None:
-                        self.board[row-1][col-2] = '.'
-                    if col < self.cols-2 and self.board[row-1][col+2] is None:
-                        self.board[row-1][col+2] = '.'
+                if self.board[row][col-1] is None:
+                    self.board[row][col-1] = 'x'
+                    self.lower_total(row, col-1)
+                    made_changes = True
+                if self.board[row][col+1] is None:
+                    self.board[row][col+1] = 'x'
+                    self.lower_total(row, col+1)
+                    made_changes = True
             # Vertical
             elif col == 0 or col == self.cols-1 or self.board[row][col-1] in ('.', 'W') or self.board[row][col+1] in ('.', 'W'):
-                self.board[row-1][col] = 'x'
-                self.board[row+1][col] = 'x'
-                if col < self.cols-1:
-                    if self.board[row][col+1] is None:
-                        self.board[row][col+1] = '.'
-                    if row > 1 and self.board[row-2][col+1] is None:
-                        self.board[row-2][col+1] = '.'
-                    if row < self.rows-2 and self.board[row+2][col+1] is None:
-                        self.board[row+2][col+1] = '.'
-                if col > 0:
-                    if self.board[row][col-1] is None:
-                        self.board[row][col-1] = '.'
-                    if row > 1 and self.board[row-2][col-1] is None:
-                        self.board[row-2][col-1] = '.'
-                    if row < self.rows-2 and self.board[row+2][col-1] is None:
-                        self.board[row+2][col-1] = '.'
+                if self.board[row-1][col] is None:
+                    self.board[row-1][col] = 'x'
+                    self.lower_total(row-1, col)
+                    made_changes = True
+                if self.board[row+1][col] is None:
+                    self.board[row+1][col] = 'x'
+                    self.lower_total(row+1, col)
+                    made_changes = True
         elif value in CIRCLE:
-            if row > 0 and self.board[row-1][col] != 'W':
+            if row > 0 and self.board[row-1][col] is None:
                 self.board[row-1][col] = '.'
-            if row < self.rows-1 and self.board[row+1][col] != 'W':
+                made_changes = True
+            if row < self.rows-1 and self.board[row+1][col] is None:
                 self.board[row+1][col] = '.'
-            if col > 0 and self.board[row][col-1] != 'W':
+                made_changes = True
+            if col > 0 and self.board[row][col-1] is None:
                 self.board[row][col-1] = '.'
-            if col < self.cols-1 and self.board[row][col+1] != 'W':
+                made_changes = True
+            if col < self.cols-1 and self.board[row][col+1] is None:
                 self.board[row][col+1] = '.'
+                made_changes = True
+        return made_changes
+
 
     def fill_board_water(self):
-        for row in range(self.rows):
-            empty_cols = 0
-            for col in range(self.cols):
-                if (self.get_row_total(row) == 0 or self.get_col_total(col) == 0) and self.get_value(row, col) is None:
-                    self.set_value(row, col, '.')
-                elif self.get_value(row, col) not in EMPTY_SPACE:
-                    self.fill_pos_water(row, col, self.get_value(row, col))
-                elif self.get_value(row, col) is None:
-                    empty_cols += 1
-            if empty_cols == self.cols:
+        made_changes = True
+        while (made_changes):
+            made_changes = False
+            for row in range(self.rows):
+                for col in range(self.cols):
+                    if (self.get_row_total(row) == 0 or self.get_col_total(col) == 0) and self.get_value(row, col) is None:
+                        self.set_value(row, col, '.')
+                        made_changes = True
+                    elif self.get_value(row, col) not in EMPTY_SPACE:
+                        made_changes = made_changes or self.fill_pos_water(row, col, self.get_value(row, col))
+
+            for row in range(self.rows):
+                empty_cols = 0
                 for col in range(self.cols):
                     if self.get_value(row, col) is None:
-                        self.set_value(row, col, 'x')
-        for col in range(self.cols):
-            empty_rows = 0
-            for row in range(self.rows):
-                if self.get_value(row, col) is None:
-                    empty_rows += 1
-            if empty_rows == self.rows:
+                        empty_cols += 1
+                if empty_cols == self.get_col_total(col):
+                    for col in range(self.cols):
+                        if self.get_value(row, col) is None:
+                            self.set_value(row, col, 'x')
+                            self.lower_total(row, col)
+                            self.fill_pos_water(row, col, 'x')
+                            made_changes = True
+            for col in range(self.cols):
+                empty_rows = 0
                 for row in range(self.rows):
                     if self.get_value(row, col) is None:
-                        self.set_value(row, col, 'x')
+                        empty_rows += 1
+                if empty_rows == self.get_row_total(row):
+                    for row in range(self.rows):
+                        if self.get_value(row, col) is None:
+                            self.set_value(row, col, 'x')
+                            self.lower_total(row, col)
+                            self.fill_pos_water(row, col, 'x')
+                            made_changes = True
+
+    def complete_unknown(self):
+        for row in range(self.rows):
+            for col in range(self.cols):
+                if self.get_value(row, col) == 'x':
+                    # Horizontal
+                    if row == 0 or row == self.rows-1 or self.get_value(row-1, col) in ('.', 'W') or self.get_value(row+1, col) in ('.', 'W'):
+                        if col == 0 or self.get_value(row, col-1) in ('.', 'W'):
+                            self.set_value(row, col, 'l')
+                        elif col == self.cols-1 or self.get_value(row, col+1) in ('.', 'W'):
+                            self.set_value(row, col, 'r')
+                        elif self.get_value(row, col-1) != None and self.get_value(row, col+1) != None:
+                            self.set_value(row, col, 'm')
+                    # Vertical
+                    elif col == 0 or col == self.cols-1 or self.get_value(row, col-1) in ('.', 'W') or self.get_value(row, col+1) in ('.', 'W'):
+                        if row == 0 or self.get_value(row-1, col) in ('.', 'W'):
+                            self.set_value(row, col, 't')
+                        elif row == self.rows-1 or self.get_value(row+1, col) in ('.', 'W'):
+                            self.set_value(row, col, 'b')
+                        elif self.get_value(row-1, col) != None and self.get_value(row+1, col) != None:
+                            self.set_value(row, col, 'm')
+
+    def possible_actions(self) -> list:
+        """Devolve uma lista de ações possíveis."""
+        actions = []
+        for row in range(self.rows):
+            for col in range(self.cols):
+                # Try to place a horizontal battleship
+                if self.get_row_total(row) > 0:
+                    if (self.get_value(row, col) in [None] + TOP) and self.get_value(row, col+1) in (['x', None] + MIDDLE) \
+                    and self.get_value(row, col+2) in (['x', None] + MIDDLE) and self.get_value(row, col+3) in (['x', None] + BOTTOM):
+                        if self.get_value(row, col) is None:
+                            actions.append((row, col, 'l'))
+        return actions
+
 
     def get_row_total(self, row: int) -> int:
         """Devolve o número de barcos na linha."""
@@ -270,7 +289,7 @@ class Board:
             hint = from_input.readline().split()[1:]
             board.set_value(int(hint[0]), int(hint[1]), hint[2])
             if hint[2] != 'W':
-                board.hints.append((int(hint[0]), int(hint[1]), hint[2]))
+                board.hints.append((int(hint[0]), int(hint[1])))
                 board.lower_total(int(hint[0]), int(hint[1]))
 
         board.remove_complete_hints()
@@ -288,7 +307,7 @@ class Board:
                 self.num_submarines -= 1
                 self.hints.remove(hint)
                 used_hints.append((row, col))
-            if self.get_value(row, col) == 'T':
+            elif self.get_value(row, col) == 'T':
                 if self.get_value(row + 1, col) == 'B':
                     self.num_destroyers -= 1
                     self.hints.remove(hint)
@@ -336,7 +355,7 @@ class Board:
         for row in range(self.rows):
             for col in range(self.cols):
                 if self.get_value(row, col) is None:
-                    print('!', end='') #DEBUG
+                    print('◻', end='') #DEBUG
                 else:
                     print(self.get_value(row, col), end='')
             print()
