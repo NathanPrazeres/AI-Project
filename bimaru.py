@@ -60,6 +60,17 @@ class Board:
         self.cols = cols
         self.board = [[None for _ in range(cols + 1)] for _ in range(rows + 1)] # +1 para guardar os valores totais da linha e coluna
 
+    def set_value(self, row: int, col: int, value):
+        """Altera o valor na respetiva posição do tabuleiro."""
+        if self.board[row][col] is None or isinstance(value, int) or not self.board[row][col].isupper():
+            self.board[row][col] = value
+
+    def get_value(self, row: int, col: int):
+        """Devolve o valor na respetiva posição do tabuleiro."""
+        if row < 0 or row >= self.rows or col < 0 or col >= self.cols:
+            return None
+        return self.board[row][col]
+
     def copy_board(self):
         """Devolve uma cópia do tabuleiro."""
         new_board = Board(self.rows, self.cols)
@@ -69,16 +80,6 @@ class Board:
         new_board.num_destroyers = self.num_destroyers
         new_board.num_submarines = self.num_submarines
         return new_board
-    
-    def set_value(self, row: int, col: int, value):
-        """Altera o valor na respetiva posição do tabuleiro."""
-        self.board[row][col] = value
-
-    def get_value(self, row: int, col: int):
-        """Devolve o valor na respetiva posição do tabuleiro."""
-        if row < 0 or row >= self.rows or col < 0 or col >= self.cols:
-            return None
-        return self.board[row][col]
     
     def fill_pos_water(self, row: int, col: int, value: str) -> bool:
         made_changes = False
