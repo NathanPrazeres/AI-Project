@@ -46,7 +46,6 @@ class BimaruState:
 
 class Board:
     """Representação interna de um tabuleiro de Bimaru."""
-    hints = []
     impossible = False
     
     num_battleships = 1
@@ -62,7 +61,7 @@ class Board:
 
     def set_value(self, row: int, col: int, value):
         """Altera o valor na respetiva posição do tabuleiro."""
-        if self.get_value(row, col) is None or isinstance(value, int) or not self.get_value(row, col).isupper():
+        if self.get_value(row, col) is None or isinstance(value, int) or not self.get_value(row, col) == 'x':
             self.board[row][col] = value
 
     def get_value(self, row: int, col: int):
@@ -70,6 +69,19 @@ class Board:
         if row < 0 or row >= self.rows or col < 0 or col >= self.cols:
             return None
         return self.board[row][col]
+
+    def get_row_total(self, row: int) -> int:
+        """Devolve o número de barcos na linha."""
+        return int(self.board[row][self.cols])
+    
+    def get_col_total(self, col: int) -> int:
+        """Devolve o número de barcos na coluna."""
+        return int(self.board[self.rows][col])
+    
+    def lower_total(self, row: int, col: int):
+        """Diminui o número de barcos por colocar na linha e coluna."""
+        self.set_value(row, self.cols, self.get_row_total(row) - 1)
+        self.set_value(self.rows, col, self.get_col_total(col) - 1)
 
     def copy_board(self):
         """Devolve uma cópia do tabuleiro."""
@@ -410,7 +422,7 @@ class Board:
                     and (col == self.cols-1 or self.get_value(row, col+1) in EMPTY_SPACE) \
                     and (row == 0 or self.get_value(row-1, col) in EMPTY_SPACE) \
                     and (col == 0 or self.get_value(row, col-1) in EMPTY_SPACE):
-                        actions.append((row, col, 'c', 'v'))
+                        actions.append((row, col, 'c', 'h'))
         return actions
 
     def apply_action(self, action: tuple):
@@ -444,29 +456,40 @@ class Board:
             elif len(move) == 1:
                 self.num_submarines -= 1
             self.fill_board_water()
-
-    def get_row_total(self, row: int) -> int:
-        """Devolve o número de barcos na linha."""
-        return int(self.board[row][self.cols])
     
-    def get_col_total(self, col: int) -> int:
-        """Devolve o número de barcos na coluna."""
-        return int(self.board[self.rows][col])
-    
-    def lower_total(self, row: int, col: int):
-        """Diminui o número de barcos por colocar na linha e coluna."""
-        self.set_value(row, self.cols, self.get_row_total(row) - 1)
-        self.set_value(self.rows, col, self.get_col_total(col) - 1)
-
-    def adjacent_vertical_values(self, row: int, col: int) -> (str, str):
-        """Devolve os valores imediatamente acima e abaixo,
-        respectivamente."""
-        return (self.get_value(row - 1, col), self.get_value(row + 1, col))
-
-    def adjacent_horizontal_values(self, row: int, col: int) -> (str, str):
-        """Devolve os valores imediatamente à esquerda e à direita,
-        respectivamente."""
-        return (self.get_value(row, col - 1), self.get_value(row, col + 1))
+    def remove_complete_hints(self, list_hints):
+        used_hints = []
+        for hint in list_hints:
+            row, col, cur = hint
+            if (row, col) in used_hints:
+                continue
+            if cur == 'C':
+                self.num_submarines -= 1
+                used_hints.append((row, col))
+            elif cur == 'T':
+                if self.get_value(row + 1, col) == 'B':
+                    self.num_destroyers -= 1
+                    used_hints.append((row, col))
+                elif self.get_value(row + 1, col) == 'M':
+                    if self.get_value(row + 2, col) == 'B':
+                        self.num_cruisers -= 1
+                        used_hints.append((row, col))
+                    elif self.get_value(row + 2, col) == 'M':
+                        if self.get_value(row + 3, col) == 'B':
+                            self.num_battleships -= 1
+                            used_hints.append((row, col))
+            elif cur == 'L':
+                if self.get_value(row, col + 1) == 'R':
+                    self.num_destroyers -= 1
+                    used_hints.append((row, col))
+                elif self.get_value(row, col + 1) == 'M':
+                    if self.get_value(row, col + 2) == 'R':
+                        self.num_cruisers -= 1
+                        used_hints.append((row, col))
+                    elif self.get_value(row, col + 2) == 'M':
+                        if self.get_value(row, col + 3) == 'R':
+                            self.num_battleships -= 1
+                            used_hints.append((row, col))
 
     @staticmethod
     def parse_instance(from_input=sys.stdin):
@@ -492,70 +515,17 @@ class Board:
             board.set_value(n_rows, col, cols[col])
 
         n_hints = eval(from_input.readline())
+        hints = []
         for _ in range(n_hints):
             hint = from_input.readline().split()[1:]
             board.set_value(int(hint[0]), int(hint[1]), hint[2])
             if hint[2] != 'W':
-                board.hints.append((int(hint[0]), int(hint[1]), hint[2]))
+                hints.append((int(hint[0]), int(hint[1]), hint[2]))
                 board.lower_total(int(hint[0]), int(hint[1]))
 
-        board.remove_complete_hints()
+        board.remove_complete_hints(hints)
         board.fill_board_water()
         return board
-    
-    def remove_complete_hints(self):
-        hints_copy = list(self.hints)
-        used_hints = []
-        for hint in hints_copy:
-            row, col, cur = hint
-            if (row, col) in used_hints:
-                continue
-            if cur == 'C':
-                self.num_submarines -= 1
-                self.hints.remove(hint)
-                used_hints.append((row, col))
-            elif cur == 'T':
-                if self.get_value(row + 1, col) == 'B':
-                    self.num_destroyers -= 1
-                    self.hints.remove(hint)
-                    self.hints.remove((row + 1, col, self.get_value(row + 1, col)))
-                    used_hints.append((row, col))
-                elif self.get_value(row + 1, col) == 'M':
-                    if self.get_value(row + 2, col) == 'B':
-                        self.num_cruisers -= 1
-                        self.hints.remove(hint)
-                        self.hints.remove((row + 1, col, self.get_value(row + 1, col)))
-                        self.hints.remove((row + 2, col, self.get_value(row + 2, col)))
-                        used_hints.append((row, col))
-                    elif self.get_value(row + 2, col) == 'M':
-                        if self.get_value(row + 3, col) == 'B':
-                            self.num_battleships -= 1
-                            self.hints.remove(hint)
-                            self.hints.remove((row + 1, col, self.get_value(row + 1, col)))
-                            self.hints.remove((row + 2, col, self.get_value(row + 2, col)))
-                            self.hints.remove((row + 3, col, self.get_value(row + 3, col)))
-                            used_hints.append((row, col))
-            elif cur == 'L':
-                if self.get_value(row, col + 1) == 'R':
-                    self.num_destroyers -= 1
-                    self.hints.remove(hint)
-                    self.hints.remove((row, col + 1, self.get_value(row, col + 1)))
-                    used_hints.append((row, col))
-                elif self.get_value(row, col + 1) == 'M':
-                    if self.get_value(row, col + 2) == 'R':
-                        self.num_cruisers -= 1
-                        self.hints.remove(hint)
-                        self.hints.remove((row, col + 1, self.get_value(row, col + 1)))
-                        self.hints.remove((row, col + 2, self.get_value(row, col + 2)))
-                        used_hints.append((row, col))
-                    elif self.get_value(row, col + 2) == 'M':
-                        if self.get_value(row, col + 3) == 'R':
-                            self.num_battleships -= 1
-                            self.hints.remove(hint)
-                            self.hints.remove((row, col + 1, self.get_value(row, col + 1)))
-                            self.hints.remove((row, col + 2, self.get_value(row, col + 2)))
-                            self.hints.remove((row, col + 3, self.get_value(row, col + 3)))
-                            used_hints.append((row, col))
 
     def print_board(self):
         """Imprime o tabuleiro no standard output (stdout)."""
@@ -611,6 +581,7 @@ class Bimaru(Problem):
 
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""
+        # Não é usado
         return -node.depth*2 # DFS mas mais lento
 
 if __name__ == "__main__":
