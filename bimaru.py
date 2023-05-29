@@ -186,10 +186,15 @@ class Board:
                 if empty_cols == self.get_row_total(row):
                     for col in range(self.cols):
                         if self.get_value(row, col) is None:
+                            if not self.get_value(row, col+1) in (['x'] + EMPTY_SPACE + MIDDLE + RIGHT) or not self.get_value(row, col-1) in (['x'] + EMPTY_SPACE + MIDDLE + LEFT) \
+                            or not self.get_value(row+1, col) in (['x'] + EMPTY_SPACE + MIDDLE + BOTTOM) or not self.get_value(row-1, col) in (['x'] + EMPTY_SPACE + MIDDLE + TOP) \
+                            or not self.get_value(row+1, col+1) in EMPTY_SPACE or not self.get_value(row+1, col-1) in EMPTY_SPACE or not self.get_value(row-1, col+1) in EMPTY_SPACE or not self.get_value(row-1, col-1) in EMPTY_SPACE:
+                                self.impossible = True
                             self.set_value(row, col, 'x')
                             self.lower_total(row, col)
                             self.fill_pos_water(row, col, 'x')
                             made_changes = True
+
             for col in range(self.cols):
                 empty_rows = 0
                 for row in range(self.rows):
@@ -198,6 +203,10 @@ class Board:
                 if empty_rows == self.get_col_total(col):
                     for row in range(self.rows):
                         if self.get_value(row, col) is None:
+                            if not self.get_value(row, col+1) in (['x'] + EMPTY_SPACE + MIDDLE + RIGHT) or not self.get_value(row, col-1) in (['x'] + EMPTY_SPACE + MIDDLE + LEFT) \
+                            or not self.get_value(row+1, col) in (['x'] + EMPTY_SPACE + MIDDLE + BOTTOM) or not self.get_value(row-1, col) in (['x'] + EMPTY_SPACE + MIDDLE + TOP) \
+                            or not self.get_value(row+1, col+1) in EMPTY_SPACE or not self.get_value(row+1, col-1) in EMPTY_SPACE or not self.get_value(row-1, col+1) in EMPTY_SPACE or not self.get_value(row-1, col-1) in EMPTY_SPACE:
+                                self.impossible = True
                             self.set_value(row, col, 'x')
                             self.lower_total(row, col)
                             self.fill_pos_water(row, col, 'x')
@@ -205,78 +214,91 @@ class Board:
         self.complete_unknown()
 
     def complete_unknown(self):
-        completed_positions = []
         for row in range(self.rows):
             for col in range(self.cols):
-                if self.get_value(row, col) == 'x':
+                if self.get_value(row, col) == 'x' and (row == 0 or self.get_value(row-1, col) in ('.', 'W')) \
+                and (col == 0 or self.get_value(row, col-1) in ('.', 'W')):
                     # Circle
-                    if (row == 0 or self.get_value(row-1, col) in ('.', 'W')) \
-                    and (row == self.rows-1 or self.get_value(row+1, col) in ('.', 'W')) \
-                    and (col == 0 or self.get_value(row, col-1) in ('.', 'W')) \
+                    if (row == self.rows-1 or self.get_value(row+1, col) in ('.', 'W')) \
                     and (col == self.cols-1 or self.get_value(row, col+1) in ('.', 'W')):
                         self.set_value(row, col, 'c')
                         self.num_submarines -= 1
+                        continue
                     # Horizontal
-                    elif row == 0 or row == self.rows-1 or ((self.get_value(row-1, col) in ('.', 'W') or self.get_value(row+1, col) in ('.', 'W')) \
-                    and not (self.get_value(row, col-1) in ('.', 'W') and self.get_value(row, col+1) in ('.', 'W'))):
-                        if col == 0 or self.get_value(row, col-1) in ('.', 'W'):
-                            self.set_value(row, col, 'l')
-                            completed_positions.append((row, col))
-                        elif col == self.cols-1 or self.get_value(row, col+1) in ('.', 'W'):
-                            self.set_value(row, col, 'r')
-                            completed_positions.append((row, col))
-                        elif self.get_value(row, col-1) != None and self.get_value(row, col+1) != None:
-                            self.set_value(row, col, 'm')
-                            completed_positions.append((row, col))
+                    size, is_boat = 1, False
+                    for i in range(1, 5):
+                        if self.get_value(row, col+i) in (['x'] + RIGHT + MIDDLE):
+                            size += 1
+                        elif self.get_value(row, col+i) in ['.', 'W']:
+                            is_boat = True
+                            break
+                        else:
+                            break
+                    if is_boat:
+                        if size == 4:
+                            self.apply_action((row, col, 'lmmr', 'h'))
+                        elif size == 3:
+                            self.apply_action((row, col, 'lmr', 'h'))
+                        elif size == 2:
+                            self.apply_action((row, col, 'lr', 'h'))
                     # Vertical
-                    elif col == 0 or col == self.cols-1 or ((self.get_value(row, col-1) in ('.', 'W') or self.get_value(row, col+1) in ('.', 'W')) \
-                    and not (self.get_value(row-1, col) in ('.', 'W') and self.get_value(row+1, col) in ('.', 'W'))):
-                        if row == 0 or self.get_value(row-1, col) in ('.', 'W'):
-                            self.set_value(row, col, 't')
-                            completed_positions.append((row, col))
-                        elif row == self.rows-1 or self.get_value(row+1, col) in ('.', 'W'):
-                            self.set_value(row, col, 'b')
-                            completed_positions.append((row, col))
-                        elif self.get_value(row-1, col) != None and self.get_value(row+1, col) != None:
-                            self.set_value(row, col, 'm')
-                            completed_positions.append((row, col))
-        for row, col in completed_positions:
-            if self.get_value(row, col) == 'l':
-                if self.get_value(row, col+1) in RIGHT:
-                    self.num_destroyers -= 1
-                elif self.get_value(row, col+1) in MIDDLE:
-                    if self.get_value(row, col+2) in RIGHT:
-                        self.num_cruisers -= 1
-                    elif self.get_value(row, col+2) in MIDDLE:
-                        self.num_battleships -= 1
-            elif self.get_value(row, col) == 't':
-                if self.get_value(row+1, col) in BOTTOM:
-                    self.num_destroyers -= 1
-                elif self.get_value(row+1, col) in MIDDLE:
-                    if self.get_value(row+2, col) in BOTTOM:
-                        self.num_cruisers -= 1
-                    elif self.get_value(row+2, col) in MIDDLE:
-                        self.num_battleships -= 1
-            elif self.get_value(row, col) == 'r':
-                if self.get_value(row, col-1) == 'L':
-                    self.num_destroyers -= 1
-                elif self.get_value(row, col-1) == 'M':
-                    if self.get_value(row, col-2) == 'L':
-                        self.num_cruisers -= 1
-                    elif self.get_value(row, col-2) == 'M':
-                        self.num_battleships -= 1
-            elif self.get_value(row, col) == 'b':
-                if self.get_value(row-1, col) == 'T':
-                    self.num_destroyers -= 1
-                elif self.get_value(row-1, col) == 'M':
-                    if self.get_value(row-2, col) == 'T':
-                        self.num_cruisers -= 1
-                    elif self.get_value(row-2, col) == 'M':
-                        self.num_battleships -= 1
-            elif self.get_value(row, col) == 'm':
-                if self.get_value(row, col+1) in RIGHT:
-                    if self.get_value(row, col-1) == 'L':
-                        self.num_destroyers -= 1
+                    size, is_boat = 1, False
+                    for i in range(1, 5):
+                        if self.get_value(row+i, col) in (['x'] + BOTTOM + MIDDLE):
+                            size += 1
+                        elif self.get_value(row+i, col) == '.':
+                            is_boat = True
+                            break
+                        else:
+                            break
+                    if is_boat:
+                        if size == 4:
+                            self.apply_action((row, col, 'tmmb', 'v'))
+                        elif size == 3:
+                            self.apply_action((row, col, 'tmb', 'v'))
+                        elif size == 2:
+                            self.apply_action((row, col, 'tb', 'v'))
+                elif self.get_value(row, col) == 'L':
+                    # Horizontal
+                    size, is_boat, already_complete = 1, False, True
+                    for i in range(1, 5):
+                        if self.get_value(row, col+i) in (['x'] + RIGHT + MIDDLE):
+                            size += 1
+                            if self.get_value(row, col+i) != 'x':
+                                already_complete = False
+                        elif self.get_value(row, col+i) == '.':
+                            is_boat = True
+                            break
+                        else:
+                            break
+                    if is_boat and not already_complete:
+                        if size == 4:
+                            self.apply_action((row, col, 'lmmr', 'h'))
+                        elif size == 3:
+                            self.apply_action((row, col, 'lmr', 'h'))
+                        elif size == 2:
+                            self.apply_action((row, col, 'lr', 'h'))
+                elif self.get_value(row, col) == 'T':
+                    # Vertical
+                    size, is_boat, already_complete = 1, False, True
+                    for i in range(1, 5):
+                        if self.get_value(row+i, col) in (['x'] + BOTTOM + MIDDLE):
+                            size += 1
+                            if self.get_value(row+i, col) != 'x':
+                                already_complete = False
+                        elif self.get_value(row+i, col) == '.':
+                            is_boat = True
+                            break
+                        else:
+                            break
+                    if is_boat and not already_complete:
+                        if size == 4:
+                            self.apply_action((row, col, 'tmmb', 'v'))
+                        elif size == 3:
+                            self.apply_action((row, col, 'tmb', 'v'))
+                        elif size == 2:
+                            self.apply_action((row, col, 'tb', 'v'))
+                    
 
     def possible_actions(self) -> list:
         """Devolve uma lista de ações possíveis."""
@@ -398,7 +420,7 @@ class Board:
         for i in move:
             if orientation == 'h':
                 old_value = self.get_value(row, col)
-                if old_value != 'x':
+                if old_value is None:
                     self.lower_total(row, col)
                 self.set_value(row, col, i)
                 if old_value != self.get_value(row, col):
@@ -406,7 +428,7 @@ class Board:
                 col += 1
             elif orientation == 'v':
                 old_value = self.get_value(row, col)
-                if old_value != 'x':
+                if old_value is None:
                     self.lower_total(row, col)
                 self.set_value(row, col, i)
                 if old_value != self.get_value(row, col):
@@ -422,8 +444,6 @@ class Board:
             elif len(move) == 1:
                 self.num_submarines -= 1
             self.fill_board_water()
-        else:
-            self.impossible = True
 
     def get_row_total(self, row: int) -> int:
         """Devolve o número de barcos na linha."""
@@ -476,25 +496,26 @@ class Board:
             hint = from_input.readline().split()[1:]
             board.set_value(int(hint[0]), int(hint[1]), hint[2])
             if hint[2] != 'W':
-                board.hints.append((int(hint[0]), int(hint[1])))
+                board.hints.append((int(hint[0]), int(hint[1]), hint[2]))
                 board.lower_total(int(hint[0]), int(hint[1]))
 
         board.remove_complete_hints()
         board.fill_board_water()
+        board.print_board()
         return board
     
     def remove_complete_hints(self):
         hints_copy = list(self.hints)
         used_hints = []
         for hint in hints_copy:
-            row, col = hint[0], hint[1]
+            row, col, cur = hint
             if (row, col) in used_hints:
                 continue
-            if self.get_value(row, col) == 'C':
+            if cur == 'C':
                 self.num_submarines -= 1
                 self.hints.remove(hint)
                 used_hints.append((row, col))
-            elif self.get_value(row, col) == 'T':
+            elif cur == 'T':
                 if self.get_value(row + 1, col) == 'B':
                     self.num_destroyers -= 1
                     self.hints.remove(hint)
@@ -515,7 +536,7 @@ class Board:
                             self.hints.remove((row + 2, col, self.get_value(row + 2, col)))
                             self.hints.remove((row + 3, col, self.get_value(row + 3, col)))
                             used_hints.append((row, col))
-            elif self.get_value(row, col) == 'L':
+            elif cur == 'L':
                 if self.get_value(row, col + 1) == 'R':
                     self.num_destroyers -= 1
                     self.hints.remove(hint)
