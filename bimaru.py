@@ -62,7 +62,7 @@ class Board:
 
     def set_value(self, row: int, col: int, value):
         """Altera o valor na respetiva posição do tabuleiro."""
-        if self.board[row][col] is None or isinstance(value, int) or not self.board[row][col].isupper():
+        if self.get_value(row, col) is None or isinstance(value, int) or not self.get_value(row, col).isupper():
             self.board[row][col] = value
 
     def get_value(self, row: int, col: int):
@@ -166,7 +166,6 @@ class Board:
                 made_changes = True
         return made_changes
 
-
     def fill_board_water(self):
         made_changes = True
         while (made_changes):
@@ -184,7 +183,7 @@ class Board:
                 for col in range(self.cols):
                     if self.get_value(row, col) is None:
                         empty_cols += 1
-                if empty_cols == self.get_col_total(col):
+                if empty_cols == self.get_row_total(row):
                     for col in range(self.cols):
                         if self.get_value(row, col) is None:
                             self.set_value(row, col, 'x')
@@ -196,48 +195,205 @@ class Board:
                 for row in range(self.rows):
                     if self.get_value(row, col) is None:
                         empty_rows += 1
-                if empty_rows == self.get_row_total(row):
+                if empty_rows == self.get_col_total(col):
                     for row in range(self.rows):
                         if self.get_value(row, col) is None:
                             self.set_value(row, col, 'x')
                             self.lower_total(row, col)
                             self.fill_pos_water(row, col, 'x')
                             made_changes = True
+        self.complete_unknown()
 
     def complete_unknown(self):
+        completed_positions = []
         for row in range(self.rows):
             for col in range(self.cols):
                 if self.get_value(row, col) == 'x':
+                    # Circle
+                    if (row == 0 or self.get_value(row-1, col) in ('.', 'W')) \
+                    and (row == self.rows-1 or self.get_value(row+1, col) in ('.', 'W')) \
+                    and (col == 0 or self.get_value(row, col-1) in ('.', 'W')) \
+                    and (col == self.cols-1 or self.get_value(row, col+1) in ('.', 'W')):
+                        self.set_value(row, col, 'c')
+                        self.num_submarines -= 1
                     # Horizontal
-                    if row == 0 or row == self.rows-1 or self.get_value(row-1, col) in ('.', 'W') or self.get_value(row+1, col) in ('.', 'W'):
+                    elif row == 0 or row == self.rows-1 or ((self.get_value(row-1, col) in ('.', 'W') or self.get_value(row+1, col) in ('.', 'W')) \
+                    and not (self.get_value(row, col-1) in ('.', 'W') and self.get_value(row, col+1) in ('.', 'W'))):
                         if col == 0 or self.get_value(row, col-1) in ('.', 'W'):
                             self.set_value(row, col, 'l')
+                            completed_positions.append((row, col, 'l'))
                         elif col == self.cols-1 or self.get_value(row, col+1) in ('.', 'W'):
                             self.set_value(row, col, 'r')
+                            completed_positions.append((row, col, 'r'))
                         elif self.get_value(row, col-1) != None and self.get_value(row, col+1) != None:
                             self.set_value(row, col, 'm')
+                            completed_positions.append((row, col, 'm'))
                     # Vertical
-                    elif col == 0 or col == self.cols-1 or self.get_value(row, col-1) in ('.', 'W') or self.get_value(row, col+1) in ('.', 'W'):
+                    elif col == 0 or col == self.cols-1 or ((self.get_value(row, col-1) in ('.', 'W') or self.get_value(row, col+1) in ('.', 'W')) \
+                    and not (self.get_value(row-1, col) in ('.', 'W') and self.get_value(row+1, col) in ('.', 'W'))):
                         if row == 0 or self.get_value(row-1, col) in ('.', 'W'):
                             self.set_value(row, col, 't')
+                            completed_positions.append((row, col, 't'))
                         elif row == self.rows-1 or self.get_value(row+1, col) in ('.', 'W'):
                             self.set_value(row, col, 'b')
+                            completed_positions.append((row, col, 'b'))
                         elif self.get_value(row-1, col) != None and self.get_value(row+1, col) != None:
                             self.set_value(row, col, 'm')
+                            completed_positions.append((row, col, 'm'))
+        for row, col, pos in completed_positions:
+            if pos == 'l':
+                if self.get_value(row, col+1) in RIGHT:
+                    self.num_destroyers -= 1
+                elif self.get_value(row, col+1) in MIDDLE:
+                    self.num_destroyers -= 1
+                    self.num_cruisers -= 1
 
     def possible_actions(self) -> list:
         """Devolve uma lista de ações possíveis."""
+        self.fill_board_water()
         actions = []
         for row in range(self.rows):
             for col in range(self.cols):
-                # Try to place a horizontal battleship
-                if self.get_row_total(row) > 0:
-                    if (self.get_value(row, col) in [None] + TOP) and self.get_value(row, col+1) in (['x', None] + MIDDLE) \
-                    and self.get_value(row, col+2) in (['x', None] + MIDDLE) and self.get_value(row, col+3) in (['x', None] + BOTTOM):
-                        if self.get_value(row, col) is None:
-                            actions.append((row, col, 'l'))
+                if self.num_battleships > 0:
+                    if row < self.rows-3:
+                        can_fit = True
+                        n_marked, n_placed = 0, 0
+                        if (row == 0 or self.get_value(row-1, col) in EMPTY_SPACE) and self.get_value(row, col) in (['x', None] + TOP) \
+                        and self.get_value(row+1, col) in (['x', None] + MIDDLE) and self.get_value(row+2, col) in (['x', None] + MIDDLE) \
+                        and self.get_value(row+3, col) in (['x', None] + BOTTOM) and (row == self.rows-4 or self.get_value(row+4, col) in EMPTY_SPACE):
+                            for i in range(4):
+                                if self.get_value(row+i, col) == 'x':
+                                    n_marked += 1
+                                elif self.get_value(row+i, col) in (TOP + MIDDLE + BOTTOM):
+                                    n_placed += 1
+                                elif self.get_row_total(row+i) < 1:
+                                    can_fit = False
+                                    break
+                            if n_placed != 4 and self.get_col_total(col) >= (4 - n_marked - n_placed) and can_fit:
+                                actions.append((row, col, 'tmmb', 'v'))
+                    if col < self.cols-3:
+                        can_fit = True
+                        n_marked, n_placed = 0, 0
+                        if (col == 0 or self.get_value(row, col-1) in EMPTY_SPACE) and self.get_value(row, col) in (['x', None] + LEFT) \
+                        and self.get_value(row, col+1) in (['x', None] + MIDDLE) and self.get_value(row, col+2) in (['x', None] + MIDDLE) \
+                        and self.get_value(row, col+3) in (['x', None] + RIGHT) and (col == self.cols-4 or self.get_value(row, col+4) in EMPTY_SPACE):
+                            for i in range(4):
+                                if self.get_value(row, col+i) == 'x':
+                                    n_marked += 1
+                                elif self.get_value(row, col+i) in (LEFT + MIDDLE + RIGHT):
+                                    n_placed += 1
+                                elif self.get_col_total(col+i) < 1:
+                                    can_fit = False
+                                    break
+                            if n_placed != 4 and self.get_row_total(row) >= (4 - n_marked - n_placed) and can_fit:
+                                actions.append((row, col, 'lmmr', 'h'))
+                elif self.num_cruisers > 0:
+                    if row < self.rows-2:
+                        can_fit = True
+                        n_marked, n_placed = 0, 0
+                        if (row == 0 or self.get_value(row-1, col) in EMPTY_SPACE) and self.get_value(row, col) in (['x', None] + TOP) \
+                        and self.get_value(row+1, col) in (['x', None] + MIDDLE) and self.get_value(row+2, col) in (['x', None] + BOTTOM) \
+                        and (row == self.rows-3 or self.get_value(row+3, col) in EMPTY_SPACE):
+                            for i in range(3):
+                                if self.get_value(row+i, col) == 'x':
+                                    n_marked += 1
+                                elif self.get_value(row+i, col) in (TOP + MIDDLE + BOTTOM):
+                                    n_placed += 1
+                                elif self.get_row_total(row+i) < 1:
+                                    can_fit = False
+                                    break
+                            if n_placed != 3 and self.get_col_total(col) >= (3 - n_marked - n_placed) and can_fit:
+                                actions.append((row, col, 'tmb', 'v'))
+                    if col < self.cols-2:
+                        can_fit = True
+                        n_marked, n_placed = 0, 0
+                        if (col == 0 or self.get_value(row, col-1) in EMPTY_SPACE) and self.get_value(row, col) in (['x', None] + LEFT) \
+                        and self.get_value(row, col+1) in (['x', None] + MIDDLE) and self.get_value(row, col+2) in (['x', None] + RIGHT) \
+                        and (col == self.cols-3 or self.get_value(row, col+3) in EMPTY_SPACE):
+                            for i in range(3):
+                                if self.get_value(row, col+i) == 'x':
+                                    n_marked += 1
+                                elif self.get_value(row, col+i) in (LEFT + MIDDLE + RIGHT):
+                                    n_placed += 1
+                                elif self.get_col_total(col+i) < 1:
+                                    can_fit = False
+                                    break
+                            if n_placed != 3 and self.get_row_total(row) >= (3 - n_marked - n_placed) and can_fit:
+                                actions.append((row, col, 'lmr', 'h'))
+                elif self.num_destroyers > 0:
+                    if row < self.rows-1:
+                        can_fit = True
+                        n_marked, n_placed = 0, 0
+                        if (row == 0 or self.get_value(row-1, col) in EMPTY_SPACE) and self.get_value(row, col) in (['x', None] + TOP) \
+                        and self.get_value(row+1, col) in (['x', None] + BOTTOM) and (row == self.rows-2 or self.get_value(row+2, col) in EMPTY_SPACE):
+                            for i in range(2):
+                                if self.get_value(row+i, col) == 'x':
+                                    n_marked += 1
+                                elif self.get_value(row+i, col) in (TOP + BOTTOM):
+                                    n_placed += 1
+                                elif self.get_row_total(row+i) < 1:
+                                    can_fit = False
+                                    break
+                            if n_placed != 2 and self.get_col_total(col) >= (2 - n_marked - n_placed) and can_fit:
+                                actions.append((row, col, 'tb', 'v'))
+                    if col < self.cols-1:
+                        can_fit = True
+                        n_marked, n_placed = 0, 0
+                        if (col == 0 or self.get_value(row, col-1) in EMPTY_SPACE) and self.get_value(row, col) in (['x', None] + LEFT) \
+                        and self.get_value(row, col+1) in (['x', None] + RIGHT) and (col == self.cols-2 or self.get_value(row, col+2) in EMPTY_SPACE):
+                            for i in range(2):
+                                if self.get_value(row, col+i) == 'x':
+                                    n_marked += 1
+                                elif self.get_value(row, col+i) in (LEFT + RIGHT):
+                                    n_placed += 1
+                                elif self.get_col_total(col+i) < 1:
+                                    can_fit = False
+                                    break
+                            if n_placed != 2 and self.get_row_total(row) >= (2 - n_marked - n_placed) and can_fit:
+                                actions.append((row, col, 'lr', 'h'))
+                elif self.num_submarines > 0:
+                    if (self.get_value(row, col) == 'x' or (self.get_value(row, col) is None \
+                    and self.get_row_total(row) >= 1 and self.get_col_total(col) >= 1)) \
+                    and (row == self.rows-1 or self.get_value(row+1, col) in EMPTY_SPACE) \
+                    and (col == self.cols-1 or self.get_value(row, col+1) in EMPTY_SPACE) \
+                    and (row == 0 or self.get_value(row-1, col) in EMPTY_SPACE) \
+                    and (col == 0 or self.get_value(row, col-1) in EMPTY_SPACE):
+                        actions.append((row, col, 'c', 'v'))
         return actions
 
+    def apply_action(self, action: tuple):
+        """Aplica a ação ao tabuleiro."""
+        row, col, move, orientation = action
+        changed = False
+        for i in move:
+            if orientation == 'h':
+                old_value = self.get_value(row, col)
+                if old_value != 'x':
+                    self.lower_total(row, col)
+                self.set_value(row, col, i)
+                if old_value != self.get_value(row, col):
+                    changed = True
+                col += 1
+            elif orientation == 'v':
+                old_value = self.get_value(row, col)
+                if old_value != 'x':
+                    self.lower_total(row, col)
+                self.set_value(row, col, i)
+                if old_value != self.get_value(row, col):
+                    changed = True
+                row += 1
+        if changed:
+            if len(move) == 4:
+                self.num_battleships -= 1
+            elif len(move) == 3:
+                self.num_cruisers -= 1
+            elif len(move) == 2:
+                self.num_destroyers -= 1
+            elif len(move) == 1:
+                self.num_submarines -= 1
+            self.fill_board_water()
+        else:
+            self.impossible = True
 
     def get_row_total(self, row: int) -> int:
         """Devolve o número de barcos na linha."""
@@ -353,13 +509,14 @@ class Board:
 
     def print_board(self):
         """Imprime o tabuleiro no standard output (stdout)."""
-        for row in range(self.rows):
-            for col in range(self.cols):
-                if self.get_value(row, col) is None:
-                    print('◻', end='') #DEBUG
+        for row in range(self.rows+1):
+            for col in range(self.cols+1):
+                if self.board[row][col] is None:
+                    print('◻', end='') # DEBUG
                 else:
-                    print(self.get_value(row, col), end='')
+                    print(self.board[row][col], end='')
             print()
+        print('++++++++++') # DEBUG
 
 ####################################################################################################
 
@@ -373,8 +530,12 @@ class Bimaru(Problem):
         """Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento."""
         board: Board = state.get_board()
-        actions = []
-        # TODO
+        actions = board.possible_actions()
+        if board.impossible:
+            return []
+        # board.print_board() # DEBUG
+        print(actions) # DEBUG
+        # exit() # DEBUG
         return actions
 
 
@@ -385,16 +546,22 @@ class Bimaru(Problem):
         self.actions(state)."""
         old_board: Board = state.get_board()
         copy: Board = old_board.copy_board()
+        copy.apply_action(action)
+        copy.print_board() # DEBUG
+        print(copy.num_battleships, copy.num_cruisers, copy.num_destroyers, copy.num_submarines) # DEBUG
+        print(copy.possible_actions()) # DEBUG
         child_state: BimaruState = BimaruState(copy)
-        # TODO
-        return child_state           
+        # exit()
+        return child_state
+        
 
     def goal_test(self, state: BimaruState):
         """Retorna True se e só se o estado passado como argumento é
         um estado objetivo. Deve verificar se todas as posições do tabuleiro
         estão preenchidas de acordo com as regras do problema."""
         board: Board = state.get_board()
-        # TODO
+        if board.impossible or board.num_submarines != 0 or board.num_destroyers != 0 or board.num_cruisers != 0 or board.num_battleships != 0:
+            return False
         return True
 
     def h(self, node: Node):
