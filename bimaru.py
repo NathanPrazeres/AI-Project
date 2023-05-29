@@ -47,7 +47,6 @@ class BimaruState:
 class Board:
     """Representação interna de um tabuleiro de Bimaru."""
     impossible = False
-    
     num_battleships = 1
     num_cruisers = 2
     num_destroyers = 3
@@ -61,7 +60,7 @@ class Board:
 
     def set_value(self, row: int, col: int, value):
         """Altera o valor na respetiva posição do tabuleiro."""
-        if self.get_value(row, col) is None or isinstance(value, int) or not self.get_value(row, col) == 'x':
+        if self.get_value(row, col) is None or isinstance(value, int) or not self.get_value(row, col).isupper():
             self.board[row][col] = value
 
     def get_value(self, row: int, col: int):
@@ -93,6 +92,40 @@ class Board:
         new_board.num_submarines = self.num_submarines
         return new_board
     
+    def remove_complete_hints(self, list_hints):
+        used_hints = []
+        for hint in list_hints:
+            row, col, cur = hint
+            if (row, col) in used_hints:
+                continue
+            if cur == 'C':
+                self.num_submarines -= 1
+                used_hints.append((row, col))
+            elif cur == 'T':
+                if self.get_value(row + 1, col) == 'B':
+                    self.num_destroyers -= 1
+                    used_hints.append((row, col))
+                elif self.get_value(row + 1, col) == 'M':
+                    if self.get_value(row + 2, col) == 'B':
+                        self.num_cruisers -= 1
+                        used_hints.append((row, col))
+                    elif self.get_value(row + 2, col) == 'M':
+                        if self.get_value(row + 3, col) == 'B':
+                            self.num_battleships -= 1
+                            used_hints.append((row, col))
+            elif cur == 'L':
+                if self.get_value(row, col + 1) == 'R':
+                    self.num_destroyers -= 1
+                    used_hints.append((row, col))
+                elif self.get_value(row, col + 1) == 'M':
+                    if self.get_value(row, col + 2) == 'R':
+                        self.num_cruisers -= 1
+                        used_hints.append((row, col))
+                    elif self.get_value(row, col + 2) == 'M':
+                        if self.get_value(row, col + 3) == 'R':
+                            self.num_battleships -= 1
+                            used_hints.append((row, col))
+
     def fill_pos_water(self, row: int, col: int, value: str) -> bool:
         made_changes = False
         if not value in EMPTY_SPACE:
@@ -422,7 +455,7 @@ class Board:
                     and (col == self.cols-1 or self.get_value(row, col+1) in EMPTY_SPACE) \
                     and (row == 0 or self.get_value(row-1, col) in EMPTY_SPACE) \
                     and (col == 0 or self.get_value(row, col-1) in EMPTY_SPACE):
-                        actions.append((row, col, 'c', 'h'))
+                        actions.append((row, col, 'c', 'v'))
         return actions
 
     def apply_action(self, action: tuple):
@@ -456,40 +489,6 @@ class Board:
             elif len(move) == 1:
                 self.num_submarines -= 1
             self.fill_board_water()
-    
-    def remove_complete_hints(self, list_hints):
-        used_hints = []
-        for hint in list_hints:
-            row, col, cur = hint
-            if (row, col) in used_hints:
-                continue
-            if cur == 'C':
-                self.num_submarines -= 1
-                used_hints.append((row, col))
-            elif cur == 'T':
-                if self.get_value(row + 1, col) == 'B':
-                    self.num_destroyers -= 1
-                    used_hints.append((row, col))
-                elif self.get_value(row + 1, col) == 'M':
-                    if self.get_value(row + 2, col) == 'B':
-                        self.num_cruisers -= 1
-                        used_hints.append((row, col))
-                    elif self.get_value(row + 2, col) == 'M':
-                        if self.get_value(row + 3, col) == 'B':
-                            self.num_battleships -= 1
-                            used_hints.append((row, col))
-            elif cur == 'L':
-                if self.get_value(row, col + 1) == 'R':
-                    self.num_destroyers -= 1
-                    used_hints.append((row, col))
-                elif self.get_value(row, col + 1) == 'M':
-                    if self.get_value(row, col + 2) == 'R':
-                        self.num_cruisers -= 1
-                        used_hints.append((row, col))
-                    elif self.get_value(row, col + 2) == 'M':
-                        if self.get_value(row, col + 3) == 'R':
-                            self.num_battleships -= 1
-                            used_hints.append((row, col))
 
     @staticmethod
     def parse_instance(from_input=sys.stdin):
@@ -581,7 +580,6 @@ class Bimaru(Problem):
 
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""
-        # Não é usado
         return -node.depth*2 # DFS mas mais lento
 
 if __name__ == "__main__":
