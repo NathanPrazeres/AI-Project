@@ -221,32 +221,62 @@ class Board:
                     and not (self.get_value(row, col-1) in ('.', 'W') and self.get_value(row, col+1) in ('.', 'W'))):
                         if col == 0 or self.get_value(row, col-1) in ('.', 'W'):
                             self.set_value(row, col, 'l')
-                            completed_positions.append((row, col, 'l'))
+                            completed_positions.append((row, col))
                         elif col == self.cols-1 or self.get_value(row, col+1) in ('.', 'W'):
                             self.set_value(row, col, 'r')
-                            completed_positions.append((row, col, 'r'))
+                            completed_positions.append((row, col))
                         elif self.get_value(row, col-1) != None and self.get_value(row, col+1) != None:
                             self.set_value(row, col, 'm')
-                            completed_positions.append((row, col, 'm'))
+                            completed_positions.append((row, col))
                     # Vertical
                     elif col == 0 or col == self.cols-1 or ((self.get_value(row, col-1) in ('.', 'W') or self.get_value(row, col+1) in ('.', 'W')) \
                     and not (self.get_value(row-1, col) in ('.', 'W') and self.get_value(row+1, col) in ('.', 'W'))):
                         if row == 0 or self.get_value(row-1, col) in ('.', 'W'):
                             self.set_value(row, col, 't')
-                            completed_positions.append((row, col, 't'))
+                            completed_positions.append((row, col))
                         elif row == self.rows-1 or self.get_value(row+1, col) in ('.', 'W'):
                             self.set_value(row, col, 'b')
-                            completed_positions.append((row, col, 'b'))
+                            completed_positions.append((row, col))
                         elif self.get_value(row-1, col) != None and self.get_value(row+1, col) != None:
                             self.set_value(row, col, 'm')
-                            completed_positions.append((row, col, 'm'))
-        for row, col, pos in completed_positions:
-            if pos == 'l':
+                            completed_positions.append((row, col))
+        for row, col in completed_positions:
+            if self.get_value(row, col) == 'l':
                 if self.get_value(row, col+1) in RIGHT:
                     self.num_destroyers -= 1
                 elif self.get_value(row, col+1) in MIDDLE:
+                    if self.get_value(row, col+2) in RIGHT:
+                        self.num_cruisers -= 1
+                    elif self.get_value(row, col+2) in MIDDLE:
+                        self.num_battleships -= 1
+            elif self.get_value(row, col) == 't':
+                if self.get_value(row+1, col) in BOTTOM:
                     self.num_destroyers -= 1
-                    self.num_cruisers -= 1
+                elif self.get_value(row+1, col) in MIDDLE:
+                    if self.get_value(row+2, col) in BOTTOM:
+                        self.num_cruisers -= 1
+                    elif self.get_value(row+2, col) in MIDDLE:
+                        self.num_battleships -= 1
+            elif self.get_value(row, col) == 'r':
+                if self.get_value(row, col-1) == 'L':
+                    self.num_destroyers -= 1
+                elif self.get_value(row, col-1) == 'M':
+                    if self.get_value(row, col-2) == 'L':
+                        self.num_cruisers -= 1
+                    elif self.get_value(row, col-2) == 'M':
+                        self.num_battleships -= 1
+            elif self.get_value(row, col) == 'b':
+                if self.get_value(row-1, col) == 'T':
+                    self.num_destroyers -= 1
+                elif self.get_value(row-1, col) == 'M':
+                    if self.get_value(row-2, col) == 'T':
+                        self.num_cruisers -= 1
+                    elif self.get_value(row-2, col) == 'M':
+                        self.num_battleships -= 1
+            elif self.get_value(row, col) == 'm':
+                if self.get_value(row, col+1) in RIGHT:
+                    if self.get_value(row, col-1) == 'L':
+                        self.num_destroyers -= 1
 
     def possible_actions(self) -> list:
         """Devolve uma lista de ações possíveis."""
