@@ -501,7 +501,6 @@ class Board:
 
         board.remove_complete_hints()
         board.fill_board_water()
-        board.print_board()
         return board
     
     def remove_complete_hints(self):
@@ -560,14 +559,10 @@ class Board:
 
     def print_board(self):
         """Imprime o tabuleiro no standard output (stdout)."""
-        for row in range(self.rows+1):
-            for col in range(self.cols+1):
-                if self.board[row][col] is None:
-                    print('◻', end='') # DEBUG
-                else:
-                    print(self.board[row][col], end='')
+        for row in range(self.rows):
+            for col in range(self.cols):
+                print(self.board[row][col], end='')
             print()
-        print('++++++++++') # DEBUG
 
 ####################################################################################################
 
@@ -584,9 +579,6 @@ class Bimaru(Problem):
         actions = board.possible_actions()
         if board.impossible:
             return []
-        # board.print_board() # DEBUG
-        print(actions) # DEBUG
-        # exit() # DEBUG
         return actions
 
 
@@ -598,11 +590,7 @@ class Bimaru(Problem):
         old_board: Board = state.get_board()
         copy: Board = old_board.copy_board()
         copy.apply_action(action)
-        copy.print_board() # DEBUG
-        print(copy.num_battleships, copy.num_cruisers, copy.num_destroyers, copy.num_submarines) # DEBUG
-        print(copy.possible_actions()) # DEBUG
         child_state: BimaruState = BimaruState(copy)
-        # exit()
         return child_state
         
 
@@ -613,11 +601,17 @@ class Bimaru(Problem):
         board: Board = state.get_board()
         if board.impossible or board.num_submarines != 0 or board.num_destroyers != 0 or board.num_cruisers != 0 or board.num_battleships != 0:
             return False
+        for row in range(board.rows):
+            if board.get_row_total(row) != 0:
+                return False
+            for col in range(board.cols):
+                if board.get_col_total(col) != 0 or board.get_value(row, col) is None:
+                    return False
         return True
 
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""
-        return -node.depth*2
+        return -node.depth*2 # DFS mas mais lento
 
 if __name__ == "__main__":
     board: Board = Board.parse_instance()
