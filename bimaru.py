@@ -454,7 +454,7 @@ class Board:
                     and (col == self.cols-1 or self.get_value(row, col+1) in EMPTY_SPACE) \
                     and (row == 0 or self.get_value(row-1, col) in EMPTY_SPACE) \
                     and (col == 0 or self.get_value(row, col-1) in EMPTY_SPACE):
-                        actions.append((row, col, 'c', 'v'))
+                        actions.append((row, col, 'c', 'h'))
         return actions
 
     def apply_action(self, action: tuple):
