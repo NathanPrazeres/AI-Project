@@ -536,9 +536,8 @@ class Board:
 
 class Bimaru(Problem):
     def __init__(self, board: Board):
-        """O construtor especifica o estado inicial."""
-        self.state = BimaruState(board)
-        super().__init__(self.state)
+        """O construtor especifica o estado inicial."""  
+        super().__init__(BimaruState(board))
 
     def actions(self, state: BimaruState):
         """Retorna uma lista de ações que podem ser executadas a
@@ -579,6 +578,7 @@ class Bimaru(Problem):
 
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""
+        # Não é usado
         return -node.depth*2 # DFS mas mais lento
 
 if __name__ == "__main__":
