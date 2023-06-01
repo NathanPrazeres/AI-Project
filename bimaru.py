@@ -579,7 +579,7 @@ class Bimaru(Problem):
     def h(self, node: Node):
         """Função heuristica utilizada para a procura A*."""
         # Não é usado
-        return -node.depth*2 # DFS mas mais lento
+        pass
 
 if __name__ == "__main__":
     board: Board = Board.parse_instance()
