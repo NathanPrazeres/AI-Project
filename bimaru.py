@@ -37,9 +37,8 @@ class BimaruState:
     def __lt__(self, other):
         return self.id < other.id
 
-    def get_board(self):
+    def get_board(self) -> 'Board':
         return self.board
-    
 
 ####################################################################################################
 
@@ -62,18 +61,18 @@ class Board:
         if self.get_value(row, col) is None or isinstance(value, int) or not self.get_value(row, col).isupper():
             self.board[row][col] = value
 
-    def get_value(self, row: int, col: int):
+    def get_value(self, row: int, col: int) -> str or None:
         """Devolve o valor na respetiva posição do tabuleiro."""
         if row < 0 or row >= self.rows or col < 0 or col >= self.cols:
             return None
         return self.board[row][col]
 
     def get_row_total(self, row: int) -> int:
-        """Devolve o número de barcos na linha."""
+        """Devolve o número de peças de barco que faltam colocar na linha."""
         return int(self.board[row][self.cols])
     
     def get_col_total(self, col: int) -> int:
-        """Devolve o número de barcos na coluna."""
+        """Devolve o número de peças de barco que faltam colocar na coluna."""
         return int(self.board[self.rows][col])
     
     def lower_total(self, row: int, col: int):
@@ -81,7 +80,7 @@ class Board:
         self.set_value(row, self.cols, self.get_row_total(row) - 1)
         self.set_value(self.rows, col, self.get_col_total(col) - 1)
 
-    def copy_board(self):
+    def copy(self) -> 'Board':
         """Devolve uma cópia do tabuleiro."""
         new_board = Board(self.rows, self.cols)
         new_board.board = [[self.board[row][col] for col in range(self.cols + 1)] for row in range(self.rows + 1)]
@@ -90,8 +89,9 @@ class Board:
         new_board.num_destroyers = self.num_destroyers
         new_board.num_submarines = self.num_submarines
         return new_board
-    
+
     def remove_complete_hints(self, list_hints):
+        """Remove à lista de barcos quando há uma hint completa."""
         used_hints = []
         for hint in list_hints:
             row, col, cur = hint
@@ -126,6 +126,7 @@ class Board:
                             used_hints.append((row, col))
 
     def fill_pos_water(self, row: int, col: int, value: str) -> bool:
+        """Preenche as células que são necessáriamente água à volta de uma peça de barco."""
         made_changes = False
         if not value in EMPTY_SPACE:
             if row > 0:
@@ -211,6 +212,7 @@ class Board:
         return made_changes
 
     def fill_board_water(self):
+        """Fill the board with water using aux functions until there are no more changes."""
         made_changes = True
         while (made_changes):
             made_changes = False
@@ -234,6 +236,7 @@ class Board:
                             or not self.get_value(row+1, col) in (['x'] + EMPTY_SPACE + MIDDLE + BOTTOM) or not self.get_value(row-1, col) in (['x'] + EMPTY_SPACE + MIDDLE + TOP) \
                             or not self.get_value(row+1, col+1) in EMPTY_SPACE or not self.get_value(row+1, col-1) in EMPTY_SPACE or not self.get_value(row-1, col+1) in EMPTY_SPACE or not self.get_value(row-1, col-1) in EMPTY_SPACE:
                                 self.impossible = True
+                                return
                             self.set_value(row, col, 'x')
                             self.lower_total(row, col)
                             self.fill_pos_water(row, col, 'x')
@@ -251,6 +254,7 @@ class Board:
                             or not self.get_value(row+1, col) in (['x'] + EMPTY_SPACE + MIDDLE + BOTTOM) or not self.get_value(row-1, col) in (['x'] + EMPTY_SPACE + MIDDLE + TOP) \
                             or not self.get_value(row+1, col+1) in EMPTY_SPACE or not self.get_value(row+1, col-1) in EMPTY_SPACE or not self.get_value(row-1, col+1) in EMPTY_SPACE or not self.get_value(row-1, col-1) in EMPTY_SPACE:
                                 self.impossible = True
+                                return
                             self.set_value(row, col, 'x')
                             self.lower_total(row, col)
                             self.fill_pos_water(row, col, 'x')
@@ -258,6 +262,7 @@ class Board:
         self.complete_unknown()
 
     def complete_unknown(self):
+        """Preenche os espaços vazios que são necessáriamente água até não haver mais mudanças."""
         for row in range(self.rows):
             for col in range(self.cols):
                 if self.get_value(row, col) == 'x' and (row == 0 or self.get_value(row-1, col) in ('.', 'W')) \
@@ -303,7 +308,6 @@ class Board:
                         elif size == 2:
                             self.apply_action((row, col, 'tb', 'v'))
                 elif self.get_value(row, col) == 'L':
-                    # Horizontal
                     size, is_boat, already_complete = 1, False, True
                     for i in range(1, 5):
                         if self.get_value(row, col+i) in (['x'] + RIGHT + MIDDLE):
@@ -323,7 +327,6 @@ class Board:
                         elif size == 2:
                             self.apply_action((row, col, 'lr', 'h'))
                 elif self.get_value(row, col) == 'T':
-                    # Vertical
                     size, is_boat, already_complete = 1, False, True
                     for i in range(1, 5):
                         if self.get_value(row+i, col) in (['x'] + BOTTOM + MIDDLE):
@@ -346,7 +349,6 @@ class Board:
 
     def possible_actions(self) -> list:
         """Devolve uma lista de ações possíveis."""
-        self.fill_board_water()
         actions = []
         for row in range(self.rows):
             for col in range(self.cols):
@@ -490,7 +492,7 @@ class Board:
             self.fill_board_water()
 
     @staticmethod
-    def parse_instance(from_input=sys.stdin):
+    def parse_instance(from_input=sys.stdin) -> 'Board':
         """Lê o test do standard input (stdin) que é passado como argumento
         e retorna uma instância da classe Board.
 
@@ -539,7 +541,7 @@ class Bimaru(Problem):
         """O construtor especifica o estado inicial."""  
         super().__init__(BimaruState(board))
 
-    def actions(self, state: BimaruState):
+    def actions(self, state: BimaruState) -> list:
         """Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento."""
         board: Board = state.get_board()
@@ -555,13 +557,14 @@ class Bimaru(Problem):
         das presentes na lista obtida pela execução de
         self.actions(state)."""
         old_board: Board = state.get_board()
-        copy: Board = old_board.copy_board()
-        copy.apply_action(action)
-        child_state: BimaruState = BimaruState(copy)
+        new_board: Board = old_board.copy()
+        new_board.apply_action(action)
+        new_board.fill_board_water()
+        child_state: BimaruState = BimaruState(new_board)
         return child_state
         
 
-    def goal_test(self, state: BimaruState):
+    def goal_test(self, state: BimaruState) -> bool:
         """Retorna True se e só se o estado passado como argumento é
         um estado objetivo. Deve verificar se todas as posições do tabuleiro
         estão preenchidas de acordo com as regras do problema."""
@@ -584,7 +587,7 @@ class Bimaru(Problem):
 if __name__ == "__main__":
     board: Board = Board.parse_instance()
 
-    problem = Bimaru(board)
+    problem: Bimaru = Bimaru(board)
 
     goal_node: Node = depth_first_tree_search(problem)
 
