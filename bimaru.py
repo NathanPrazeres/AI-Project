@@ -223,6 +223,9 @@ class Board:
                         made_changes = True
                     elif self.get_value(row, col) not in EMPTY_SPACE:
                         made_changes = made_changes or self.fill_pos_water(row, col, self.get_value(row, col))
+                    elif self.get_row_total(row) < 0 or self.get_col_total(col) < 0:
+                        self.impossible = True
+                        return
 
             for row in range(self.rows):
                 empty_cols = 0
@@ -545,9 +548,9 @@ class Bimaru(Problem):
         """Retorna uma lista de ações que podem ser executadas a
         partir do estado passado como argumento."""
         board: Board = state.get_board()
-        actions = board.possible_actions()
         if board.impossible:
             return []
+        actions = board.possible_actions()
         return actions
 
 
@@ -556,8 +559,7 @@ class Bimaru(Problem):
         'state' passado como argumento. A ação a executar deve ser uma
         das presentes na lista obtida pela execução de
         self.actions(state)."""
-        old_board: Board = state.get_board()
-        new_board: Board = old_board.copy()
+        new_board: Board = state.get_board().copy()
         new_board.apply_action(action)
         new_board.fill_board_water()
         child_state: BimaruState = BimaruState(new_board)
