@@ -212,7 +212,7 @@ class Board:
         return made_changes
 
     def fill_board_water(self):
-        """Fill the board with water using aux functions until there are no more changes."""
+        """Preenche os espaços vazios que são necessáriamente água até não haver mais mudanças."""
         made_changes = True
         while (made_changes):
             made_changes = False
@@ -265,7 +265,7 @@ class Board:
         self.complete_unknown()
 
     def complete_unknown(self):
-        """Preenche os espaços vazios que são necessáriamente água até não haver mais mudanças."""
+        """Tenta descobrir se os placeholders conseguem completar um barco."""
         for row in range(self.rows):
             for col in range(self.cols):
                 if self.get_value(row, col) == 'x' and (row == 0 or self.get_value(row-1, col) in ('.', 'W')) \
